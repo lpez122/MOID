@@ -10,7 +10,7 @@ npm run catalog
 npm start
 ```
 
-Open `http://127.0.0.1:4173`.
+Open `h`.
 
 The catalog command selects 200 concepts with at least 10 finalized images, creates 640px JPEG derivatives, and places the 2,000 web assets in `public/images`. The high-resolution source corpus is never modified.
 
