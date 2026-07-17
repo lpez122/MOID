@@ -1,0 +1,11 @@
+{
+  "name": "moid-website",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "catalog": "node scripts/generate-catalog.mjs",
+    "start": "node server.mjs",
+    "dev": "node server.mjs"
+  }
+}

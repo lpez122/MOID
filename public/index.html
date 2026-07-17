@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="MOID is a massive, research-ready database of object images." />
+    <title>MOID — Massive Object Image Database</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="MOID home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>MOID</span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="#about">About</a>
+        <a href="#explore">Explore</a>
+        <a class="nav-pill" href="#access">Get access <span>↗</span></a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="eyebrow"><span></span> Massive Object Image Database</div>
+        <h1 id="hero-title">A world of objects,<br /><em>ready to study.</em></h1>
+        <div class="hero-bottom">
+          <p>MOID is an extensive, carefully organized image corpus built to support research into object recognition, visual cognition, and machine intelligence.</p>
+          <a class="circle-link" href="#explore" aria-label="Explore the database">↓</a>
+        </div>
+      </section>
+
+      <section class="image-marquee" aria-label="Sample images from the database">
+        <div class="marquee-track" id="marquee"></div>
+      </section>
+
+      <section class="about" id="about">
+        <p class="section-kicker">01 / The database</p>
+        <div class="about-grid">
+          <h2>Built for seeing<br />the bigger picture.</h2>
+          <div class="about-copy">
+            <p>Objects are the building blocks of visual experience. MOID brings thousands of carefully framed examples into one coherent, navigable resource.</p>
+            <p>From animals and tools to foods, instruments, and everyday objects, the collection is designed for scale without sacrificing organization.</p>
+          </div>
+        </div>
+        <div class="stats" aria-label="Database statistics">
+          <div><strong id="image-count">—</strong><span>Finalized images</span></div>
+          <div><strong id="concept-count">—</strong><span>Object concepts</span></div>
+          <div><strong id="category-count">—</strong><span>Broad categories</span></div>
+        </div>
+      </section>
+
+      <section class="explorer" id="explore" aria-labelledby="explore-title">
+        <div class="explorer-heading">
+          <div>
+            <p class="section-kicker">02 / Image explorer</p>
+            <h2 id="explore-title">Find an object.</h2>
+          </div>
+          <p id="result-count" aria-live="polite">Loading the collection…</p>
+        </div>
+
+        <div class="search-wrap">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
+          <input id="search" type="search" placeholder="Search objects, e.g. accordion" autocomplete="off" />
+          <kbd>/</kbd>
+        </div>
+        <div class="filters" id="filters" aria-label="Filter by category"></div>
+
+        <div class="gallery" id="gallery"></div>
+        <button class="load-more" id="load-more" type="button">Show more images <span>↓</span></button>
+        <p class="empty" id="empty" hidden>No objects match that search. Try a broader term.</p>
+      </section>
+
+      <section class="access" id="access">
+        <p class="section-kicker light">03 / Research access</p>
+        <h2>Made to be<br /><em>put to work.</em></h2>
+        <div class="access-bottom">
+          <p>MOID is being prepared for research access. Dataset documentation, licensing details, and download options will live here.</p>
+          <a href="mailto:hello@moid.org">Request access <span>↗</span></a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a class="brand footer-brand" href="#top"><span class="brand-mark"></span><span>MOID</span></a>
+      <p>Massive Object Image Database</p>
+      <p>© <span id="year"></span> MOID</p>
+    </footer>
+
+    <dialog id="image-dialog">
+      <button class="dialog-close" type="button" aria-label="Close image detail">×</button>
+      <div class="dialog-image"><img alt="" /></div>
+      <div class="dialog-copy">
+        <p class="dialog-category"></p>
+        <h3></h3>
+        <p class="dialog-collection"></p>
+      </div>
+    </dialog>
+  </body>
+</html>
