@@ -1,4 +1,4 @@
-const state = { catalog: null, category: "All", query: "", shown: 24 };
+const state = { catalog: null, category: "All", query: "", shown: 12 };
 
 const elements = {
   gallery: document.querySelector("#gallery"),
@@ -22,6 +22,23 @@ function filteredImages() {
   }).sort((a, b) => featureRank(a) - featureRank(b));
 }
 
+function filteredGroups() {
+  const groups = new Map();
+  for (const image of filteredImages()) {
+    const key = `${image.categorySlug}/${image.slug}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        name: image.name,
+        category: image.category,
+        collection: image.collection,
+        images: []
+      });
+    }
+    if (groups.get(key).images.length < 8) groups.get(key).images.push(image);
+  }
+  return [...groups.values()];
+}
+
 function openImage(image) {
   const dialog = elements.dialog;
   const dialogImage = dialog.querySelector("img");
@@ -34,21 +51,36 @@ function openImage(image) {
 }
 
 function renderGallery() {
-  const matches = filteredImages();
+  const matches = filteredGroups();
   const visible = matches.slice(0, state.shown);
-  elements.gallery.replaceChildren(...visible.map((image) => {
-    const card = document.createElement("button");
-    card.className = "image-card";
-    card.type = "button";
-    card.setAttribute("aria-label", `View ${image.name}`);
-    card.innerHTML = `
-      <figure><img src="${image.image}" alt="${image.name}" loading="lazy" decoding="async" /></figure>
-      <span class="image-meta"><strong>${image.name}</strong><span>${image.category}</span></span>`;
-    card.addEventListener("click", () => openImage(image));
-    return card;
+  elements.gallery.replaceChildren(...visible.map((group) => {
+    const row = document.createElement("section");
+    row.className = "object-row";
+
+    const label = document.createElement("div");
+    label.className = "object-row-label";
+    label.innerHTML = `<h3>${group.name}</h3><p>${group.collection}<br />${group.category}</p>`;
+
+    const strip = document.createElement("div");
+    strip.className = "object-row-strip";
+    const images = document.createElement("div");
+    images.className = "object-row-images";
+    images.replaceChildren(...group.images.map((image, index) => {
+      const card = document.createElement("button");
+      card.className = "image-card";
+      card.type = "button";
+      card.setAttribute("aria-label", `View ${image.name}, image ${index + 1}`);
+      card.innerHTML = `<figure><img src="${image.image}" alt="${image.name}" loading="lazy" decoding="async" /></figure>`;
+      card.addEventListener("click", () => openImage(image));
+      return card;
+    }));
+    strip.append(images);
+    row.append(label, strip);
+    return row;
   }));
 
-  elements.resultCount.textContent = `${format(matches.length)} image${matches.length === 1 ? "" : "s"}`;
+  const imageCount = matches.reduce((total, group) => total + group.images.length, 0);
+  elements.resultCount.textContent = `${format(matches.length)} label${matches.length === 1 ? "" : "s"} · ${format(imageCount)} images`;
   elements.loadMore.hidden = state.shown >= matches.length || matches.length === 0;
   elements.empty.hidden = matches.length !== 0;
 }
@@ -62,7 +94,7 @@ function renderFilters() {
     button.textContent = category;
     button.addEventListener("click", () => {
       state.category = category;
-      state.shown = 24;
+      state.shown = 12;
       renderFilters();
       renderGallery();
     });
@@ -110,11 +142,11 @@ elements.search.addEventListener("input", (event) => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     state.query = event.target.value;
-    state.shown = 24;
+    state.shown = 12;
     renderGallery();
   }, 120);
 });
-elements.loadMore.addEventListener("click", () => { state.shown += 24; renderGallery(); });
+elements.loadMore.addEventListener("click", () => { state.shown += 12; renderGallery(); });
 elements.dialog.querySelector(".dialog-close").addEventListener("click", () => elements.dialog.close());
 elements.dialog.addEventListener("click", (event) => { if (event.target === elements.dialog) elements.dialog.close(); });
 document.addEventListener("keydown", (event) => {
