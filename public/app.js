@@ -1,4 +1,4 @@
-const state = { catalog: null, category: "All", query: "", shown: 12, explorerOpen: false };
+const state = { catalog: null, category: "All", query: "", shown: 12, explorerOpen: false, animating: false };
 
 const elements = {
   explorer: document.querySelector("#explore"),
@@ -107,25 +107,115 @@ function renderFilters() {
   }));
 }
 
-function setExplorerOpen(open) {
+const nextPaint = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+async function animateFilterPieces(sourceRect) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const targets = [...elements.filters.querySelectorAll(".filter")];
+  const columns = Math.ceil(targets.length / 2);
+  const inset = 8;
+  const gap = 2;
+  const brickWidth = Math.max(12, (sourceRect.width - (inset * 2) - (gap * (columns - 1))) / columns);
+  const brickHeight = (sourceRect.height - (inset * 2) - gap) / 2;
+
+  const animations = targets.map((target, index) => {
+    const targetRect = target.getBoundingClientRect();
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    const startLeft = sourceRect.left + inset + (column * (brickWidth + gap));
+    const startTop = sourceRect.top + inset + (row * (brickHeight + gap));
+    const piece = document.createElement("div");
+    piece.className = "category-piece";
+    if (target.classList.contains("active")) piece.classList.add("active");
+    piece.innerHTML = `<span>${target.textContent}</span>`;
+    piece.style.left = `${startLeft}px`;
+    piece.style.top = `${startTop}px`;
+    piece.style.width = `${brickWidth}px`;
+    piece.style.height = `${brickHeight}px`;
+    document.body.append(piece);
+
+    const xKick = (column - ((columns - 1) / 2)) * 5;
+    const yKick = row === 0 ? -22 : 22;
+    const animation = piece.animate([
+      {
+        background: "#d9ff57",
+        borderRadius: "4px",
+        height: `${brickHeight}px`,
+        left: `${startLeft}px`,
+        top: `${startTop}px`,
+        width: `${brickWidth}px`
+      },
+      {
+        background: "#d9ff57",
+        borderRadius: "7px",
+        height: `${brickHeight}px`,
+        left: `${startLeft + xKick}px`,
+        offset: 0.34,
+        top: `${startTop + yKick}px`,
+        width: `${brickWidth}px`
+      },
+      {
+        background: target.classList.contains("active") ? "#151713" : "#fffef9",
+        borderRadius: "999px",
+        height: `${targetRect.height}px`,
+        left: `${targetRect.left}px`,
+        top: `${targetRect.top}px`,
+        width: `${targetRect.width}px`
+      }
+    ], {
+      delay: index * 24,
+      duration: 660,
+      easing: "cubic-bezier(.2,.8,.2,1)",
+      fill: "forwards"
+    });
+
+    piece.querySelector("span").animate([
+      { opacity: 0, transform: "scale(.75)" },
+      { opacity: 0, transform: "scale(.75)", offset: 0.45 },
+      { opacity: 1, transform: "scale(1)" }
+    ], {
+      delay: index * 24,
+      duration: 660,
+      easing: "ease-out",
+      fill: "forwards"
+    });
+
+    return animation.finished.finally(() => piece.remove());
+  });
+
+  await Promise.all(animations);
+}
+
+async function setExplorerOpen(open) {
+  if (state.animating || state.explorerOpen === open) return;
+  state.animating = true;
   state.explorerOpen = open;
   elements.explorerToggle.setAttribute("aria-expanded", String(open));
-  elements.explorerToggleLabel.textContent = open ? "Close explorer" : "Explore the collection";
 
   if (open) {
     elements.explorerPanel.hidden = false;
     renderGallery();
-    requestAnimationFrame(() => {
-      elements.explorer.classList.add("is-open");
-      elements.explorerPanel.setAttribute("aria-hidden", "false");
-    });
+    elements.explorer.classList.add("is-building");
+    await nextPaint();
+    const sourceRect = elements.explorerToggle.getBoundingClientRect();
+    elements.explorerToggleLabel.textContent = "Close explorer";
+    elements.explorer.classList.add("is-open");
+    elements.explorerPanel.setAttribute("aria-hidden", "false");
+    await animateFilterPieces(sourceRect);
+    elements.explorer.classList.remove("is-building");
+    state.animating = false;
     return;
   }
 
+  elements.explorerToggleLabel.textContent = "Explore the collection";
   elements.explorer.classList.remove("is-open");
   elements.explorerPanel.setAttribute("aria-hidden", "true");
   setTimeout(() => {
-    if (!state.explorerOpen) elements.explorerPanel.hidden = true;
+    if (!state.explorerOpen) {
+      elements.explorerPanel.hidden = true;
+      state.animating = false;
+    }
   }, 420);
 }
 
