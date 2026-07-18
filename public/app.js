@@ -1,4 +1,12 @@
-const state = { catalog: null, category: "All", query: "", shown: 12, explorerOpen: false, animating: false };
+const state = {
+  catalog: null,
+  category: "All",
+  query: "",
+  shown: 12,
+  explorerOpen: false,
+  animating: false,
+  closedPillRect: null
+};
 
 const elements = {
   explorer: document.querySelector("#explore"),
@@ -115,8 +123,10 @@ function getClosedPillRect() {
   return {
     left: headingRect.left,
     top: currentRect.top,
-    width: window.innerWidth <= 800 ? headingRect.width : 250,
-    height: currentRect.height
+    width: window.innerWidth <= 800
+      ? headingRect.width
+      : (state.closedPillRect?.width ?? 250),
+    height: state.closedPillRect?.height ?? currentRect.height
   };
 }
 
@@ -124,54 +134,62 @@ async function animateFilterPieces(direction, pillRect) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   const targets = [...elements.filters.querySelectorAll(".filter")];
-  const columns = Math.ceil(targets.length / 2);
-  const inset = 8;
-  const gap = 2;
   const duration = 720;
   const maximumDelay = direction === "open"
     ? (targets.length - 1) * 18
     : (targets.length - 1) * 14;
-  const brickWidth = Math.max(12, (pillRect.width - (inset * 2) - (gap * (columns - 1))) / columns);
-  const brickHeight = (pillRect.height - (inset * 2) - gap) / 2;
+  const sliceWidth = pillRect.width / targets.length;
+  const sliceHeight = pillRect.height;
 
   const animations = targets.map((target, index) => {
     const targetRect = target.getBoundingClientRect();
-    const column = index % columns;
-    const row = Math.floor(index / columns);
-    const brickLeft = pillRect.left + inset + (column * (brickWidth + gap));
-    const brickTop = pillRect.top + inset + (row * (brickHeight + gap));
+    const sliceLeft = pillRect.left + (index * sliceWidth);
+    const sliceTop = pillRect.top;
+    const isFirst = index === 0;
+    const isLast = index === targets.length - 1;
+    const sliceRadius = isFirst
+      ? "999px 0 0 999px"
+      : (isLast ? "0 999px 999px 0" : "0");
+    const sliceBorder = isFirst
+      ? "1px 0 1px 1px"
+      : (isLast ? "1px 1px 1px 0" : "1px 0");
     const piece = document.createElement("div");
     piece.className = "category-piece";
     if (target.classList.contains("active")) piece.classList.add("active");
     piece.innerHTML = `<span>${target.textContent}</span>`;
     const startsAtPill = direction === "open";
-    piece.style.left = `${startsAtPill ? brickLeft : targetRect.left}px`;
-    piece.style.top = `${startsAtPill ? brickTop : targetRect.top}px`;
-    piece.style.width = `${startsAtPill ? brickWidth : targetRect.width}px`;
-    piece.style.height = `${startsAtPill ? brickHeight : targetRect.height}px`;
+    piece.style.left = `${startsAtPill ? sliceLeft : targetRect.left}px`;
+    piece.style.top = `${startsAtPill ? sliceTop : targetRect.top}px`;
+    piece.style.width = `${startsAtPill ? sliceWidth : targetRect.width}px`;
+    piece.style.height = `${startsAtPill ? sliceHeight : targetRect.height}px`;
+    piece.style.borderRadius = startsAtPill ? sliceRadius : "999px";
+    piece.style.borderWidth = startsAtPill ? sliceBorder : "1px";
     document.body.append(piece);
 
-    const xKick = (column - ((columns - 1) / 2)) * 4;
-    const yKick = row === 0 ? -18 : 18;
+    const xKick = (index - ((targets.length - 1) / 2)) * 2.5;
+    const yKick = index % 2 === 0 ? -14 : 14;
     const pillFrame = {
       background: "#d9ff57",
-      borderRadius: "4px",
-      height: `${brickHeight}px`,
-      left: `${brickLeft}px`,
-      top: `${brickTop}px`,
-      width: `${brickWidth}px`
+      borderRadius: sliceRadius,
+      borderWidth: sliceBorder,
+      height: `${sliceHeight}px`,
+      left: `${sliceLeft}px`,
+      top: `${sliceTop}px`,
+      width: `${sliceWidth}px`
     };
     const kickFrame = {
       background: "#d9ff57",
-      borderRadius: "7px",
-      height: `${brickHeight}px`,
-      left: `${brickLeft + xKick}px`,
-      top: `${brickTop + yKick}px`,
-      width: `${brickWidth}px`
+      borderRadius: "6px",
+      borderWidth: "1px",
+      height: `${sliceHeight}px`,
+      left: `${sliceLeft + xKick}px`,
+      top: `${sliceTop + yKick}px`,
+      width: `${sliceWidth}px`
     };
     const targetFrame = {
       background: target.classList.contains("active") ? "#151713" : "#fffef9",
       borderRadius: "999px",
+      borderWidth: "1px",
       height: `${targetRect.height}px`,
       left: `${targetRect.left}px`,
       top: `${targetRect.top}px`,
@@ -244,6 +262,10 @@ async function setExplorerOpen(open) {
     elements.explorer.classList.add("is-building");
     await nextPaint();
     const pillRect = elements.explorerToggle.getBoundingClientRect();
+    state.closedPillRect = {
+      width: pillRect.width,
+      height: pillRect.height
+    };
     elements.explorerToggleLabel.textContent = "Close explorer";
     elements.explorer.classList.add("is-open");
     elements.explorerPanel.setAttribute("aria-hidden", "false");
