@@ -11,6 +11,7 @@ const elements = {
 };
 
 const format = (number) => new Intl.NumberFormat("en-US").format(number);
+const featureRank = (image) => image.slug === "hedgehog" ? 0 : 1;
 
 function filteredImages() {
   const query = state.query.trim().toLowerCase();
@@ -18,7 +19,7 @@ function filteredImages() {
     const inCategory = state.category === "All" || image.category === state.category;
     const searchable = `${image.name} ${image.category} ${image.collection}`.toLowerCase();
     return inCategory && (!query || searchable.includes(query));
-  });
+  }).sort((a, b) => featureRank(a) - featureRank(b));
 }
 
 function openImage(image) {
@@ -71,7 +72,9 @@ function renderFilters() {
 
 function renderMarquee() {
   const used = new Set();
-  const samples = state.catalog.images.filter((image) => {
+  const samples = [...state.catalog.images]
+    .sort((a, b) => featureRank(a) - featureRank(b))
+    .filter((image) => {
     if (used.has(image.category)) return false;
     used.add(image.category);
     return true;
