@@ -125,7 +125,7 @@ async function init() {
     const response = await fetch("./catalog.json");
     if (!response.ok) throw new Error("Catalog unavailable");
     state.catalog = await response.json();
-    document.querySelector("#image-count").textContent = format(state.catalog.stats.images);
+    document.querySelector("#image-count").textContent = format(state.catalog.stats.totalImages ?? 24592);
     document.querySelector("#concept-count").textContent = format(state.catalog.stats.concepts);
     document.querySelector("#category-count").textContent = format(state.catalog.stats.categories);
     renderMarquee();

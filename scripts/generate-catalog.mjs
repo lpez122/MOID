@@ -160,7 +160,12 @@ const images = jobs.map((job, index) => ({
 
 const payload = {
   generatedAt: new Date().toISOString(),
-  stats: { images: images.length, concepts: selectedConcepts.length, categories: categories.length },
+  stats: {
+    images: images.length,
+    totalImages: sourceFiles.length,
+    concepts: selectedConcepts.length,
+    categories: categories.length
+  },
   categories: categories.map(titleCase),
   images
 };
