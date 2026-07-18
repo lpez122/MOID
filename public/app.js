@@ -1,6 +1,10 @@
-const state = { catalog: null, category: "All", query: "", shown: 12 };
+const state = { catalog: null, category: "All", query: "", shown: 12, explorerOpen: false };
 
 const elements = {
+  explorer: document.querySelector("#explore"),
+  explorerToggle: document.querySelector("#explore-toggle"),
+  explorerToggleLabel: document.querySelector(".explore-toggle-label"),
+  explorerPanel: document.querySelector("#explorer-panel"),
   gallery: document.querySelector("#gallery"),
   filters: document.querySelector("#filters"),
   search: document.querySelector("#search"),
@@ -87,11 +91,12 @@ function renderGallery() {
 
 function renderFilters() {
   const categories = ["All", ...state.catalog.categories];
-  elements.filters.replaceChildren(...categories.map((category) => {
+  elements.filters.replaceChildren(...categories.map((category, index) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `filter${category === state.category ? " active" : ""}`;
     button.textContent = category;
+    button.style.setProperty("--chip-index", index);
     button.addEventListener("click", () => {
       state.category = category;
       state.shown = 12;
@@ -100,6 +105,28 @@ function renderFilters() {
     });
     return button;
   }));
+}
+
+function setExplorerOpen(open) {
+  state.explorerOpen = open;
+  elements.explorerToggle.setAttribute("aria-expanded", String(open));
+  elements.explorerToggleLabel.textContent = open ? "Close explorer" : "Explore the collection";
+
+  if (open) {
+    elements.explorerPanel.hidden = false;
+    renderGallery();
+    requestAnimationFrame(() => {
+      elements.explorer.classList.add("is-open");
+      elements.explorerPanel.setAttribute("aria-hidden", "false");
+    });
+    return;
+  }
+
+  elements.explorer.classList.remove("is-open");
+  elements.explorerPanel.setAttribute("aria-hidden", "true");
+  setTimeout(() => {
+    if (!state.explorerOpen) elements.explorerPanel.hidden = true;
+  }, 420);
 }
 
 function renderMarquee() {
@@ -130,7 +157,7 @@ async function init() {
     document.querySelector("#category-count").textContent = format(state.catalog.stats.categories);
     renderMarquee();
     renderFilters();
-    renderGallery();
+    elements.resultCount.textContent = `${format(state.catalog.stats.concepts)} object labels available to preview`;
   } catch (error) {
     elements.resultCount.textContent = "Could not load the image catalog.";
     console.error(error);
@@ -147,12 +174,18 @@ elements.search.addEventListener("input", (event) => {
   }, 120);
 });
 elements.loadMore.addEventListener("click", () => { state.shown += 12; renderGallery(); });
+elements.explorerToggle.addEventListener("click", () => setExplorerOpen(!state.explorerOpen));
 elements.dialog.querySelector(".dialog-close").addEventListener("click", () => elements.dialog.close());
 elements.dialog.addEventListener("click", (event) => { if (event.target === elements.dialog) elements.dialog.close(); });
 document.addEventListener("keydown", (event) => {
   if (event.key === "/" && document.activeElement !== elements.search) {
     event.preventDefault();
-    elements.search.focus();
+    if (!state.explorerOpen) setExplorerOpen(true);
+    setTimeout(() => elements.search.focus(), state.explorerOpen ? 0 : 360);
+  }
+  if (event.key === "Escape" && state.explorerOpen && !elements.dialog.open) {
+    setExplorerOpen(false);
+    elements.explorerToggle.focus();
   }
 });
 document.querySelector("#year").textContent = new Date().getFullYear();

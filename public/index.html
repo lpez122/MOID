@@ -57,19 +57,28 @@
             <p class="section-kicker">02 / Image explorer</p>
             <h2 id="explore-title">Find an object.</h2>
           </div>
-          <p id="result-count" aria-live="polite">Loading the collection…</p>
         </div>
 
-        <div class="search-wrap">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
-          <input id="search" type="search" placeholder="Search objects, e.g. accordion" autocomplete="off" />
-          <kbd>/</kbd>
-        </div>
-        <div class="filters" id="filters" aria-label="Filter by category"></div>
+        <button class="explore-toggle" id="explore-toggle" type="button" aria-expanded="false" aria-controls="explorer-panel">
+          <span class="explore-toggle-label">Explore the collection</span>
+          <span class="toggle-symbol" aria-hidden="true"><i></i><i></i><i></i></span>
+        </button>
 
-        <div class="gallery" id="gallery"></div>
-        <button class="load-more" id="load-more" type="button">Show more object labels <span>↓</span></button>
-        <p class="empty" id="empty" hidden>No objects match that search. Try a broader term.</p>
+        <div class="explorer-panel" id="explorer-panel" aria-hidden="true" hidden>
+          <div class="search-wrap">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
+            <input id="search" type="search" placeholder="Search objects, e.g. accordion" autocomplete="off" />
+            <kbd>/</kbd>
+          </div>
+          <div class="explorer-controls">
+            <div class="filters" id="filters" aria-label="Filter by category"></div>
+            <p id="result-count" aria-live="polite">Loading the collection…</p>
+          </div>
+
+          <div class="gallery" id="gallery"></div>
+          <button class="load-more" id="load-more" type="button">Show more object labels <span>↓</span></button>
+          <p class="empty" id="empty" hidden>No objects match that search. Try a broader term.</p>
+        </div>
       </section>
 
       <section class="access" id="access">
