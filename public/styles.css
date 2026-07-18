@@ -77,8 +77,9 @@ h1 em, .access h2 em { font-family: var(--serif); font-weight: 400; }
 .explorer.is-open .toggle-symbol i:nth-child(1) { transform: rotate(45deg) scaleX(2.2); }
 .explorer.is-open .toggle-symbol i:nth-child(2) { transform: scale(0); }
 .explorer.is-open .toggle-symbol i:nth-child(3) { transform: rotate(-45deg) scaleX(2.2); }
-.explorer.is-building .explore-toggle { opacity: 0; transform: scale(.88); }
-.explorer-panel { opacity: 0; transform: translateY(20px); transition: opacity 360ms ease, transform 420ms cubic-bezier(.2,.8,.2,1); }
+.explorer.is-building .explore-toggle, .explorer.is-collapsing .explore-toggle { opacity: 0; transform: scale(.92); }
+.explorer.is-building.is-settling .explore-toggle, .explorer.is-collapsing.is-settling .explore-toggle { opacity: 1; transform: scale(1); }
+.explorer-panel { opacity: 0; transform: translateY(16px); transition: opacity 560ms ease, transform 640ms cubic-bezier(.2,.8,.2,1); }
 .explorer-panel[hidden] { display: none; }
 .explorer.is-building .explorer-panel { transform: translateY(0); }
 .explorer.is-open .explorer-panel { opacity: 1; transform: translateY(0); }
@@ -92,7 +93,8 @@ kbd { border: 1px solid var(--line); border-radius: 4px; color: #77786f; font-si
 .filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 5px; }
 .filter { background: transparent; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; flex: 0 0 auto; font-size: 0.72rem; padding: 9px 13px; transition: background 150ms ease, border-color 150ms ease, color 150ms ease, opacity 120ms ease; }
 .filter:hover, .filter.active { background: var(--ink); border-color: var(--ink); color: var(--white); }
-.explorer.is-building .filter { opacity: 0; }
+.explorer.is-building .filter, .explorer.is-collapsing .filter { opacity: 0; }
+.explorer.is-building.is-settling .filter { opacity: 1; }
 .category-piece { align-items: center; background: var(--acid); border: 1px solid var(--ink); box-sizing: border-box; display: flex; font-size: .72rem; font-weight: 500; justify-content: center; overflow: hidden; pointer-events: none; position: fixed; white-space: nowrap; z-index: 100; }
 .category-piece span { opacity: 0; padding: 0 13px; }
 .category-piece.active { color: var(--white); }

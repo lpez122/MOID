@@ -109,82 +109,127 @@ function renderFilters() {
 
 const nextPaint = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-async function animateFilterPieces(sourceRect) {
+function getClosedPillRect() {
+  const headingRect = document.querySelector(".explorer-heading").getBoundingClientRect();
+  const currentRect = elements.explorerToggle.getBoundingClientRect();
+  return {
+    left: headingRect.left,
+    top: currentRect.top,
+    width: window.innerWidth <= 800 ? headingRect.width : 250,
+    height: currentRect.height
+  };
+}
+
+async function animateFilterPieces(direction, pillRect) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   const targets = [...elements.filters.querySelectorAll(".filter")];
   const columns = Math.ceil(targets.length / 2);
   const inset = 8;
   const gap = 2;
-  const brickWidth = Math.max(12, (sourceRect.width - (inset * 2) - (gap * (columns - 1))) / columns);
-  const brickHeight = (sourceRect.height - (inset * 2) - gap) / 2;
+  const duration = 720;
+  const maximumDelay = direction === "open"
+    ? (targets.length - 1) * 18
+    : (targets.length - 1) * 14;
+  const brickWidth = Math.max(12, (pillRect.width - (inset * 2) - (gap * (columns - 1))) / columns);
+  const brickHeight = (pillRect.height - (inset * 2) - gap) / 2;
 
   const animations = targets.map((target, index) => {
     const targetRect = target.getBoundingClientRect();
     const column = index % columns;
     const row = Math.floor(index / columns);
-    const startLeft = sourceRect.left + inset + (column * (brickWidth + gap));
-    const startTop = sourceRect.top + inset + (row * (brickHeight + gap));
+    const brickLeft = pillRect.left + inset + (column * (brickWidth + gap));
+    const brickTop = pillRect.top + inset + (row * (brickHeight + gap));
     const piece = document.createElement("div");
     piece.className = "category-piece";
     if (target.classList.contains("active")) piece.classList.add("active");
     piece.innerHTML = `<span>${target.textContent}</span>`;
-    piece.style.left = `${startLeft}px`;
-    piece.style.top = `${startTop}px`;
-    piece.style.width = `${brickWidth}px`;
-    piece.style.height = `${brickHeight}px`;
+    const startsAtPill = direction === "open";
+    piece.style.left = `${startsAtPill ? brickLeft : targetRect.left}px`;
+    piece.style.top = `${startsAtPill ? brickTop : targetRect.top}px`;
+    piece.style.width = `${startsAtPill ? brickWidth : targetRect.width}px`;
+    piece.style.height = `${startsAtPill ? brickHeight : targetRect.height}px`;
     document.body.append(piece);
 
-    const xKick = (column - ((columns - 1) / 2)) * 5;
-    const yKick = row === 0 ? -22 : 22;
-    const animation = piece.animate([
-      {
-        background: "#d9ff57",
-        borderRadius: "4px",
-        height: `${brickHeight}px`,
-        left: `${startLeft}px`,
-        top: `${startTop}px`,
-        width: `${brickWidth}px`
-      },
-      {
-        background: "#d9ff57",
-        borderRadius: "7px",
-        height: `${brickHeight}px`,
-        left: `${startLeft + xKick}px`,
-        offset: 0.34,
-        top: `${startTop + yKick}px`,
-        width: `${brickWidth}px`
-      },
-      {
-        background: target.classList.contains("active") ? "#151713" : "#fffef9",
-        borderRadius: "999px",
-        height: `${targetRect.height}px`,
-        left: `${targetRect.left}px`,
-        top: `${targetRect.top}px`,
-        width: `${targetRect.width}px`
-      }
-    ], {
-      delay: index * 24,
-      duration: 660,
+    const xKick = (column - ((columns - 1) / 2)) * 4;
+    const yKick = row === 0 ? -18 : 18;
+    const pillFrame = {
+      background: "#d9ff57",
+      borderRadius: "4px",
+      height: `${brickHeight}px`,
+      left: `${brickLeft}px`,
+      top: `${brickTop}px`,
+      width: `${brickWidth}px`
+    };
+    const kickFrame = {
+      background: "#d9ff57",
+      borderRadius: "7px",
+      height: `${brickHeight}px`,
+      left: `${brickLeft + xKick}px`,
+      top: `${brickTop + yKick}px`,
+      width: `${brickWidth}px`
+    };
+    const targetFrame = {
+      background: target.classList.contains("active") ? "#151713" : "#fffef9",
+      borderRadius: "999px",
+      height: `${targetRect.height}px`,
+      left: `${targetRect.left}px`,
+      top: `${targetRect.top}px`,
+      width: `${targetRect.width}px`
+    };
+    const openingFrames = [
+      { ...pillFrame, opacity: 1 },
+      { ...kickFrame, offset: 0.3, opacity: 1 },
+      { ...targetFrame, offset: 0.82, opacity: 1 },
+      { ...targetFrame, opacity: 0 }
+    ];
+    const closingFrames = [
+      { ...targetFrame, opacity: 1 },
+      { ...targetFrame, offset: 0.18, opacity: 1 },
+      { ...kickFrame, offset: 0.7, opacity: 1 },
+      { ...pillFrame, offset: 0.9, opacity: 1 },
+      { ...pillFrame, opacity: 0 }
+    ];
+    const delay = direction === "open" ? index * 18 : (targets.length - index - 1) * 14;
+    const pieceDuration = duration + maximumDelay - delay;
+    const animation = piece.animate(direction === "open" ? openingFrames : closingFrames, {
+      delay,
+      duration: pieceDuration,
       easing: "cubic-bezier(.2,.8,.2,1)",
       fill: "forwards"
     });
 
-    piece.querySelector("span").animate([
-      { opacity: 0, transform: "scale(.75)" },
-      { opacity: 0, transform: "scale(.75)", offset: 0.45 },
-      { opacity: 1, transform: "scale(1)" }
-    ], {
-      delay: index * 24,
-      duration: 660,
-      easing: "ease-out",
-      fill: "forwards"
-    });
+    const openingLabelFrames = [
+      { opacity: 0, transform: "scale(.8)" },
+      { opacity: 0, transform: "scale(.8)", offset: 0.48 },
+      { opacity: 1, transform: "scale(1)", offset: 0.82 },
+      { opacity: 0, transform: "scale(1)" }
+    ];
+    const closingLabelFrames = [
+      { opacity: 1, transform: "scale(1)" },
+      { opacity: 1, transform: "scale(1)", offset: 0.2 },
+      { opacity: 0, transform: "scale(.8)", offset: 0.55 },
+      { opacity: 0, transform: "scale(.8)" }
+    ];
+    piece.querySelector("span").animate(
+      direction === "open" ? openingLabelFrames : closingLabelFrames,
+      {
+        delay,
+        duration: pieceDuration,
+        easing: "ease-out",
+        fill: "forwards"
+      }
+    );
 
     return animation.finished.finally(() => piece.remove());
   });
 
+  const settleTimer = setTimeout(() => {
+    elements.explorer.classList.add("is-settling");
+  }, maximumDelay + duration - 145);
+
   await Promise.all(animations);
+  clearTimeout(settleTimer);
 }
 
 async function setExplorerOpen(open) {
@@ -198,25 +243,26 @@ async function setExplorerOpen(open) {
     renderGallery();
     elements.explorer.classList.add("is-building");
     await nextPaint();
-    const sourceRect = elements.explorerToggle.getBoundingClientRect();
+    const pillRect = elements.explorerToggle.getBoundingClientRect();
     elements.explorerToggleLabel.textContent = "Close explorer";
     elements.explorer.classList.add("is-open");
     elements.explorerPanel.setAttribute("aria-hidden", "false");
-    await animateFilterPieces(sourceRect);
-    elements.explorer.classList.remove("is-building");
+    await animateFilterPieces("open", pillRect);
+    elements.explorer.classList.remove("is-building", "is-settling");
     state.animating = false;
     return;
   }
 
-  elements.explorerToggleLabel.textContent = "Explore the collection";
+  const pillRect = getClosedPillRect();
+  const reverseAnimation = animateFilterPieces("close", pillRect);
+  elements.explorer.classList.add("is-collapsing");
   elements.explorer.classList.remove("is-open");
   elements.explorerPanel.setAttribute("aria-hidden", "true");
-  setTimeout(() => {
-    if (!state.explorerOpen) {
-      elements.explorerPanel.hidden = true;
-      state.animating = false;
-    }
-  }, 420);
+  await reverseAnimation;
+  elements.explorerToggleLabel.textContent = "Explore the collection";
+  elements.explorerPanel.hidden = true;
+  elements.explorer.classList.remove("is-collapsing", "is-settling");
+  state.animating = false;
 }
 
 function renderMarquee() {
