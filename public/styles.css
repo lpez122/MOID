@@ -46,7 +46,7 @@ h1 em, .access h2 em { font-family: var(--serif); font-weight: 400; }
 .image-marquee { background: var(--acid); overflow: hidden; padding: 18px 0; }
 .marquee-track { animation: drift 42s linear infinite; display: flex; gap: 14px; width: max-content; }
 .marquee-track:hover { animation-play-state: paused; }
-.marquee-card { background: var(--white); height: clamp(160px, 24vw, 310px); padding: 8px; width: clamp(160px, 24vw, 310px); }
+.marquee-card { background: var(--white); height: clamp(100px, 12vw, 160px); padding: 8px; width: clamp(100px, 12vw, 160px); }
 .marquee-card img { height: 100%; object-fit: contain; width: 100%; }
 @keyframes drift { to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; } html { scroll-behavior: auto; } }
@@ -75,7 +75,7 @@ kbd { border: 1px solid var(--line); border-radius: 4px; color: #77786f; font-si
 .filters { display: flex; gap: 8px; margin: 22px 0 50px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
 .filter { background: transparent; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; flex: 0 0 auto; font-size: 0.72rem; padding: 9px 13px; transition: 150ms ease; }
 .filter:hover, .filter.active { background: var(--ink); border-color: var(--ink); color: var(--white); }
-.gallery { display: grid; gap: 1px; grid-template-columns: repeat(4, 1fr); }
+.gallery { display: grid; gap: 1px; grid-template-columns: repeat(8, 1fr); }
 .image-card { background: var(--paper); border: 0; cursor: pointer; min-width: 0; overflow: hidden; padding: 0; text-align: left; }
 .image-card figure { aspect-ratio: 1; margin: 0; overflow: hidden; padding: 8%; }
 .image-card img { height: 100%; object-fit: contain; transition: transform 350ms cubic-bezier(.2,.8,.2,1); width: 100%; }
@@ -124,4 +124,8 @@ dialog::backdrop { background: rgba(15,17,14,.72); backdrop-filter: blur(4px); }
   .image-meta strong { display: block; }
   .access-bottom { align-items: start; flex-direction: column; gap: 45px; }
   footer > p:nth-child(2) { display: none; }
+}
+
+@media (min-width: 801px) and (max-width: 1100px) {
+  .gallery { grid-template-columns: repeat(4, 1fr); }
 }
