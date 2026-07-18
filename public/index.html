@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="MOID is a massive, research-ready database of object images." />
     <title>MOID — Massive Object Image Database</title>
-    <link rel="stylesheet" href="./styles.css" />
-    <script type="module" src="./app.js"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260718-taxonomy" />
+    <script type="module" src="./app.js?v=20260718-taxonomy"></script>
   </head>
   <body>
     <header class="site-header">
@@ -17,6 +17,7 @@
       <nav aria-label="Main navigation">
         <a href="#about">About</a>
         <a href="#explore">Explore</a>
+        <a href="#taxonomy">Taxonomy</a>
         <a class="nav-pill" href="#access">Get access <span>↗</span></a>
       </nav>
     </header>
@@ -81,8 +82,31 @@
         </div>
       </section>
 
+      <section class="taxonomy" id="taxonomy" aria-labelledby="taxonomy-title">
+        <p class="section-kicker">03 / Taxonomy explorer</p>
+        <div class="taxonomy-heading">
+          <h2 id="taxonomy-title">Trace the<br /><em>taxonomy.</em></h2>
+          <p>Browse the complete organization of MOID, from broad categories to individual object labels.</p>
+        </div>
+
+        <div class="taxonomy-toolbar">
+          <label class="taxonomy-search" for="taxonomy-search">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
+            <input id="taxonomy-search" type="search" placeholder="Search the full taxonomy" autocomplete="off" />
+          </label>
+          <div class="taxonomy-actions" aria-label="Taxonomy display controls">
+            <button id="taxonomy-expand-level" type="button">Expand one level</button>
+            <button id="taxonomy-expand-all" type="button">Expand all</button>
+            <button id="taxonomy-collapse-all" type="button">Collapse all</button>
+          </div>
+        </div>
+        <p class="taxonomy-status" id="taxonomy-status" aria-live="polite">Loading the taxonomy…</p>
+        <div class="taxonomy-tree" id="taxonomy-tree" aria-label="MOID taxonomy"></div>
+        <p class="taxonomy-empty" id="taxonomy-empty" hidden>No taxonomy labels match that search.</p>
+      </section>
+
       <section class="access" id="access">
-        <p class="section-kicker light">03 / Research access</p>
+        <p class="section-kicker light">04 / Research access</p>
         <h2>Made to be<br /><em>put to work.</em></h2>
         <div class="access-bottom">
           <p>MOID is being prepared for research access. Dataset documentation and download options will live here.</p>

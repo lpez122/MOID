@@ -5,7 +5,12 @@ const state = {
   shown: 12,
   explorerOpen: false,
   animating: false,
-  closedPillRect: null
+  closedPillRect: null,
+  taxonomy: null,
+  taxonomyQuery: "",
+  expandedCategories: new Set(),
+  expandedGroups: new Set(),
+  taxonomyAnimationToken: 0
 };
 
 const elements = {
@@ -19,7 +24,14 @@ const elements = {
   resultCount: document.querySelector("#result-count"),
   loadMore: document.querySelector("#load-more"),
   empty: document.querySelector("#empty"),
-  dialog: document.querySelector("#image-dialog")
+  dialog: document.querySelector("#image-dialog"),
+  taxonomyTree: document.querySelector("#taxonomy-tree"),
+  taxonomySearch: document.querySelector("#taxonomy-search"),
+  taxonomyStatus: document.querySelector("#taxonomy-status"),
+  taxonomyEmpty: document.querySelector("#taxonomy-empty"),
+  taxonomyExpandLevel: document.querySelector("#taxonomy-expand-level"),
+  taxonomyExpandAll: document.querySelector("#taxonomy-expand-all"),
+  taxonomyCollapseAll: document.querySelector("#taxonomy-collapse-all")
 };
 
 const format = (number) => new Intl.NumberFormat("en-US").format(number);
@@ -321,16 +333,222 @@ function renderMarquee() {
   }));
 }
 
+function filteredTaxonomy() {
+  const query = state.taxonomyQuery.trim().toLowerCase();
+  if (!query) return state.taxonomy.categories;
+
+  return state.taxonomy.categories.flatMap((category) => {
+    if (category.label.toLowerCase().includes(query)) return [category];
+
+    const groups = category.groups.flatMap((group) => {
+      if (group.label.toLowerCase().includes(query)) return [group];
+      const concepts = group.concepts.filter((concept) => concept.label.toLowerCase().includes(query));
+      return concepts.length ? [{ ...group, concepts }] : [];
+    });
+    return groups.length ? [{ ...category, groups }] : [];
+  });
+}
+
+function setCategoryExpanded(categoryElement, expanded) {
+  categoryElement.classList.toggle("is-expanded", expanded);
+  categoryElement.querySelector(":scope > .taxonomy-root").setAttribute("aria-expanded", String(expanded));
+}
+
+function setGroupExpanded(groupElement, expanded) {
+  groupElement.classList.toggle("is-expanded", expanded);
+  groupElement.querySelector(":scope > .taxonomy-group-button").setAttribute("aria-expanded", String(expanded));
+}
+
+function makeTaxonomyButton(className, label, count, expanded, controls) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.setAttribute("aria-expanded", String(expanded));
+  button.setAttribute("aria-controls", controls);
+
+  const name = document.createElement("span");
+  name.className = "taxonomy-node-name";
+  name.textContent = label;
+  const meta = document.createElement("span");
+  meta.className = "taxonomy-node-meta";
+  meta.textContent = format(count);
+  const symbol = document.createElement("span");
+  symbol.className = "taxonomy-node-symbol";
+  symbol.setAttribute("aria-hidden", "true");
+  symbol.textContent = "+";
+  button.append(name, meta, symbol);
+  return button;
+}
+
+function renderTaxonomy() {
+  const categories = filteredTaxonomy();
+  const searching = Boolean(state.taxonomyQuery.trim());
+  let visibleGroups = 0;
+  let visibleConcepts = 0;
+
+  const categoryElements = categories.map((category, categoryIndex) => {
+    visibleGroups += category.groups.length;
+    const conceptCount = category.groups.reduce((total, group) => total + group.concepts.length, 0);
+    visibleConcepts += conceptCount;
+    const categoryElement = document.createElement("article");
+    categoryElement.className = "taxonomy-category";
+    categoryElement.dataset.category = category.id;
+    categoryElement.style.setProperty("--branch-index", categoryIndex);
+    const categoryDrawerId = `taxonomy-category-${category.id}`;
+    const categoryExpanded = searching || state.expandedCategories.has(category.id);
+    const categoryButton = makeTaxonomyButton(
+      "taxonomy-root",
+      category.label,
+      conceptCount,
+      categoryExpanded,
+      categoryDrawerId
+    );
+    categoryButton.addEventListener("click", () => {
+      const expanded = !categoryElement.classList.contains("is-expanded");
+      if (expanded) state.expandedCategories.add(category.id);
+      else state.expandedCategories.delete(category.id);
+      setCategoryExpanded(categoryElement, expanded);
+    });
+
+    const categoryDrawer = document.createElement("div");
+    categoryDrawer.className = "taxonomy-category-drawer";
+    categoryDrawer.id = categoryDrawerId;
+    const categoryInner = document.createElement("div");
+    categoryInner.className = "taxonomy-category-inner";
+
+    categoryInner.replaceChildren(...category.groups.map((group, groupIndex) => {
+      const groupElement = document.createElement("section");
+      groupElement.className = "taxonomy-group";
+      groupElement.dataset.group = group.id;
+      groupElement.style.setProperty("--branch-index", groupIndex);
+      const groupDrawerId = `taxonomy-group-${group.id.replaceAll("/", "-")}`;
+      const groupExpanded = searching || state.expandedGroups.has(group.id);
+      const groupButton = makeTaxonomyButton(
+        "taxonomy-group-button",
+        group.label,
+        group.concepts.length,
+        groupExpanded,
+        groupDrawerId
+      );
+      groupButton.addEventListener("click", () => {
+        const expanded = !groupElement.classList.contains("is-expanded");
+        if (expanded) state.expandedGroups.add(group.id);
+        else state.expandedGroups.delete(group.id);
+        setGroupExpanded(groupElement, expanded);
+      });
+
+      const groupDrawer = document.createElement("div");
+      groupDrawer.className = "taxonomy-group-drawer";
+      groupDrawer.id = groupDrawerId;
+      const concepts = document.createElement("div");
+      concepts.className = "taxonomy-concepts";
+      concepts.replaceChildren(...group.concepts.map((concept, conceptIndex) => {
+        const item = document.createElement("span");
+        item.className = "taxonomy-concept";
+        item.textContent = concept.label;
+        item.style.setProperty("--concept-index", conceptIndex);
+        return item;
+      }));
+      groupDrawer.append(concepts);
+      groupElement.append(groupButton, groupDrawer);
+      if (groupExpanded) groupElement.classList.add("is-expanded");
+      return groupElement;
+    }));
+
+    categoryDrawer.append(categoryInner);
+    categoryElement.append(categoryButton, categoryDrawer);
+    if (categoryExpanded) categoryElement.classList.add("is-expanded");
+    return categoryElement;
+  });
+
+  elements.taxonomyTree.replaceChildren(...categoryElements);
+  elements.taxonomyEmpty.hidden = categories.length !== 0;
+  elements.taxonomyStatus.textContent = searching
+    ? `${format(visibleConcepts)} matching labels across ${format(categories.length)} categories`
+    : `${format(state.taxonomy.stats.categories)} categories · ${format(state.taxonomy.stats.groups)} groups · ${format(state.taxonomy.stats.concepts)} object labels`;
+}
+
+function animateTaxonomyTo({ categories = false, groups = false, collapse = false }) {
+  const token = ++state.taxonomyAnimationToken;
+  const categoryElements = [...elements.taxonomyTree.querySelectorAll(".taxonomy-category")];
+  const groupElements = [...elements.taxonomyTree.querySelectorAll(".taxonomy-group")];
+  const apply = (element, expanded, index, setter) => {
+    setTimeout(() => {
+      if (token === state.taxonomyAnimationToken) setter(element, expanded);
+    }, index * 24);
+  };
+
+  if (collapse) {
+    [...groupElements].reverse().forEach((element, index) => {
+      setTimeout(() => {
+        if (token === state.taxonomyAnimationToken) setGroupExpanded(element, false);
+      }, Math.min(index * 8, 360));
+    });
+    const categoryDelay = 500;
+    [...categoryElements].reverse().forEach((element, index) => {
+      setTimeout(() => {
+        if (token === state.taxonomyAnimationToken) setCategoryExpanded(element, false);
+      }, categoryDelay + index * 24);
+    });
+    return;
+  }
+
+  if (categories) categoryElements.forEach((element, index) => apply(element, true, index, setCategoryExpanded));
+  if (groups) {
+    const groupDelay = categories ? Math.min(categoryElements.length * 24, 320) + 180 : 0;
+    groupElements.forEach((element, index) => {
+      setTimeout(() => {
+        if (token === state.taxonomyAnimationToken) setGroupExpanded(element, true);
+      }, groupDelay + Math.min(index * 12, 520));
+    });
+  }
+}
+
+function expandTaxonomyLevel() {
+  const allCategoriesExpanded = state.taxonomy.categories.every((category) => state.expandedCategories.has(category.id));
+  if (!allCategoriesExpanded) {
+    state.taxonomy.categories.forEach((category) => state.expandedCategories.add(category.id));
+    animateTaxonomyTo({ categories: true });
+    return;
+  }
+  state.taxonomy.categories.forEach((category) => {
+    category.groups.forEach((group) => state.expandedGroups.add(group.id));
+  });
+  animateTaxonomyTo({ groups: true });
+}
+
+function expandEntireTaxonomy() {
+  state.taxonomy.categories.forEach((category) => {
+    state.expandedCategories.add(category.id);
+    category.groups.forEach((group) => state.expandedGroups.add(group.id));
+  });
+  animateTaxonomyTo({ categories: true, groups: true });
+}
+
+function collapseTaxonomy() {
+  state.expandedGroups.clear();
+  state.expandedCategories.clear();
+  animateTaxonomyTo({ collapse: true });
+}
+
 async function init() {
   try {
-    const response = await fetch("./catalog.json");
-    if (!response.ok) throw new Error("Catalog unavailable");
-    state.catalog = await response.json();
+    const [catalogResponse, taxonomyResponse] = await Promise.all([
+      fetch("./catalog.json"),
+      fetch("./taxonomy.json?v=20260718-taxonomy")
+    ]);
+    if (!catalogResponse.ok) throw new Error("Catalog unavailable");
+    if (!taxonomyResponse.ok) throw new Error("Taxonomy unavailable");
+    [state.catalog, state.taxonomy] = await Promise.all([
+      catalogResponse.json(),
+      taxonomyResponse.json()
+    ]);
     document.querySelector("#image-count").textContent = format(state.catalog.stats.totalImages ?? 24592);
-    document.querySelector("#concept-count").textContent = format(state.catalog.stats.concepts);
-    document.querySelector("#category-count").textContent = format(state.catalog.stats.categories);
+    document.querySelector("#concept-count").textContent = format(state.taxonomy.stats.concepts);
+    document.querySelector("#category-count").textContent = format(state.taxonomy.stats.categories);
     renderMarquee();
     renderFilters();
+    renderTaxonomy();
     elements.resultCount.textContent = `${format(state.catalog.stats.concepts)} object labels available to preview`;
   } catch (error) {
     elements.resultCount.textContent = "Could not load the image catalog.";
@@ -347,12 +565,25 @@ elements.search.addEventListener("input", (event) => {
     renderGallery();
   }, 120);
 });
+let taxonomySearchTimer;
+elements.taxonomySearch.addEventListener("input", (event) => {
+  clearTimeout(taxonomySearchTimer);
+  taxonomySearchTimer = setTimeout(() => {
+    state.taxonomyQuery = event.target.value;
+    renderTaxonomy();
+  }, 120);
+});
+elements.taxonomyExpandLevel.addEventListener("click", expandTaxonomyLevel);
+elements.taxonomyExpandAll.addEventListener("click", expandEntireTaxonomy);
+elements.taxonomyCollapseAll.addEventListener("click", collapseTaxonomy);
 elements.loadMore.addEventListener("click", () => { state.shown += 12; renderGallery(); });
 elements.explorerToggle.addEventListener("click", () => setExplorerOpen(!state.explorerOpen));
 elements.dialog.querySelector(".dialog-close").addEventListener("click", () => elements.dialog.close());
 elements.dialog.addEventListener("click", (event) => { if (event.target === elements.dialog) elements.dialog.close(); });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "/" && document.activeElement !== elements.search) {
+  const activeElement = document.activeElement;
+  const isTyping = activeElement.matches("input, textarea, select, [contenteditable='true']");
+  if (event.key === "/" && !isTyping) {
     event.preventDefault();
     if (!state.explorerOpen) setExplorerOpen(true);
     setTimeout(() => elements.search.focus(), state.explorerOpen ? 0 : 360);

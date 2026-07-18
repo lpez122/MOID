@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "catalog": "node scripts/generate-catalog.mjs",
+    "taxonomy": "node scripts/generate-taxonomy.mjs",
     "start": "node server.mjs",
     "dev": "node server.mjs"
   }
