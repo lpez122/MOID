@@ -13,6 +13,23 @@ const conceptTarget = 200;
 const imagesPerConcept = 10;
 const longestEdge = 640;
 const jpegQuality = 72;
+const excludedConcepts = new Set([
+  "animals/crustaceans/blue_crab"
+]);
+const excludedImages = new Set([
+  "animals/crustaceans/crab/crab_3.jpg",
+  "animals/crustaceans/crab/crab_4.jpg",
+  "animals/crustaceans/crab/crab_7.jpg",
+  "animals/crustaceans/crab/crab_8.jpg",
+  "animals/crustaceans/king_crab/king_crab_1.jpg",
+  "animals/crustaceans/king_crab/king_crab_2.jpg",
+  "animals/crustaceans/king_crab/king_crab_3.jpg",
+  "animals/crustaceans/king_crab/king_crab_4.jpg",
+  "animals/crustaceans/king_crab/king_crab_5.jpg",
+  "animals/crustaceans/king_crab/king_crab_7.jpg",
+  "animals/crustaceans/king_crab/king_crab_8.jpg",
+  "animals/crustaceans/king_crab/king_crab_10.jpg"
+]);
 
 const titleCase = (value) => value
   .replaceAll("_", " ")
@@ -78,7 +95,10 @@ for (const file of sourceFiles) {
   concepts.get(key).files.push(file);
 }
 
-const eligible = [...concepts.values()].filter((concept) => concept.files.length >= imagesPerConcept);
+const eligible = [...concepts.values()].filter((concept) => {
+  const conceptPath = `${concept.category}/${concept.collection}/${concept.concept}`;
+  return concept.files.length >= imagesPerConcept && !excludedConcepts.has(conceptPath);
+});
 const byCategory = Map.groupBy(eligible, (concept) => concept.category);
 const categories = [...byCategory.keys()].sort(natural);
 const selectedConcepts = [];
@@ -111,9 +131,11 @@ const jobs = selectedConcepts.flatMap((concept) => concept.files
   .slice(0, imagesPerConcept)
   .map((source, index) => {
     const filename = `${concept.concept}_${index + 1}.jpg`;
+    const webPath = [concept.category, concept.collection, concept.concept, filename].join("/");
     const destination = join(imageOutputRoot, concept.category, concept.collection, concept.concept, filename);
-    return { ...concept, source, destination, filename };
-  }));
+    return { ...concept, source, destination, filename, webPath };
+  }))
+  .filter((job) => !excludedImages.has(job.webPath));
 
 await rm(imageOutputRoot, { recursive: true, force: true });
 await mkdir(imageOutputRoot, { recursive: true });
@@ -133,7 +155,7 @@ const images = jobs.map((job, index) => ({
   category: titleCase(job.category),
   categorySlug: job.category,
   collection: titleCase(job.collection),
-  image: `images/${[job.category, job.collection, job.concept, job.filename].map(encodeURIComponent).join("/")}`
+  image: `images/${job.webPath.split("/").map(encodeURIComponent).join("/")}`
 }));
 
 const payload = {
