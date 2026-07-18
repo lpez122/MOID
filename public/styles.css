@@ -80,8 +80,8 @@ kbd { border: 1px solid var(--line); border-radius: 4px; color: #77786f; font-si
 .object-row-label { align-self: center; }
 .object-row-label h3 { font-size: clamp(1rem, 1.4vw, 1.35rem); letter-spacing: -0.035em; margin: 0 0 8px; }
 .object-row-label p { color: #787a72; font-size: 0.65rem; line-height: 1.45; margin: 0; }
-.object-row-strip { min-width: 0; overflow-x: auto; scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
-.object-row-images { display: grid; gap: 1px; grid-template-columns: repeat(8, minmax(80px, 1fr)); min-width: 720px; }
+.object-row-strip { min-width: 0; }
+.object-row-images { display: grid; gap: 1px; grid-template-columns: repeat(8, minmax(0, 1fr)); }
 .image-card { background: var(--paper); border: 0; cursor: pointer; min-width: 0; overflow: hidden; padding: 0; text-align: left; }
 .image-card figure { aspect-ratio: 1; margin: 0; overflow: hidden; padding: 8%; }
 .image-card img { height: 100%; object-fit: contain; transition: transform 350ms cubic-bezier(.2,.8,.2,1); width: 100%; }
@@ -126,7 +126,7 @@ dialog::backdrop { background: rgba(15,17,14,.72); backdrop-filter: blur(4px); }
   .object-row-label { margin-bottom: 14px; }
   .object-row-label p br { display: none; }
   .object-row-label p br::after { content: " · "; }
-  .object-row-images { grid-template-columns: repeat(8, 105px); min-width: max-content; }
+  .object-row-images { grid-template-columns: repeat(8, minmax(0, 1fr)); }
   .access-bottom { align-items: start; flex-direction: column; gap: 45px; }
   footer > p:nth-child(2) { display: none; }
 }
