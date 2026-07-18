@@ -214,7 +214,7 @@ async function animateFilterPieces(direction, pillRect) {
       delay,
       duration: pieceDuration,
       easing: "cubic-bezier(.2,.8,.2,1)",
-      fill: "forwards"
+      fill: "both"
     });
 
     const openingLabelFrames = [
@@ -235,7 +235,7 @@ async function animateFilterPieces(direction, pillRect) {
         delay,
         duration: pieceDuration,
         easing: "ease-out",
-        fill: "forwards"
+        fill: "both"
       }
     );
 
@@ -244,7 +244,7 @@ async function animateFilterPieces(direction, pillRect) {
 
   const settleTimer = setTimeout(() => {
     elements.explorer.classList.add("is-settling");
-  }, maximumDelay + duration - 145);
+  }, maximumDelay + duration - 240);
 
   await Promise.all(animations);
   clearTimeout(settleTimer);
@@ -259,17 +259,19 @@ async function setExplorerOpen(open) {
   if (open) {
     elements.explorerPanel.hidden = false;
     renderGallery();
-    elements.explorer.classList.add("is-building");
+    elements.explorer.classList.add("is-preparing");
     await nextPaint();
     const pillRect = elements.explorerToggle.getBoundingClientRect();
     state.closedPillRect = {
       width: pillRect.width,
       height: pillRect.height
     };
+    const openingAnimation = animateFilterPieces("open", pillRect);
     elements.explorerToggleLabel.textContent = "Close explorer";
-    elements.explorer.classList.add("is-open");
+    elements.explorer.classList.add("is-building", "is-open");
+    elements.explorer.classList.remove("is-preparing");
     elements.explorerPanel.setAttribute("aria-hidden", "false");
-    await animateFilterPieces("open", pillRect);
+    await openingAnimation;
     elements.explorer.classList.remove("is-building", "is-settling");
     state.animating = false;
     return;
@@ -280,8 +282,10 @@ async function setExplorerOpen(open) {
   elements.explorer.classList.add("is-collapsing");
   elements.explorer.classList.remove("is-open");
   elements.explorerPanel.setAttribute("aria-hidden", "true");
+  setTimeout(() => {
+    if (!state.explorerOpen) elements.explorerToggleLabel.textContent = "Explore the collection";
+  }, 220);
   await reverseAnimation;
-  elements.explorerToggleLabel.textContent = "Explore the collection";
   elements.explorerPanel.hidden = true;
   elements.explorer.classList.remove("is-collapsing", "is-settling");
   state.animating = false;

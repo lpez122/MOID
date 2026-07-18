@@ -81,6 +81,7 @@ h1 em, .access h2 em { font-family: var(--serif); font-weight: 400; }
 .explorer.is-building.is-settling .explore-toggle, .explorer.is-collapsing.is-settling .explore-toggle { opacity: 1; transform: scale(1); }
 .explorer-panel { opacity: 0; transform: translateY(16px); transition: opacity 560ms ease, transform 640ms cubic-bezier(.2,.8,.2,1); }
 .explorer-panel[hidden] { display: none; }
+.explorer.is-preparing .explorer-panel { transform: translateY(0); }
 .explorer.is-building .explorer-panel { transform: translateY(0); }
 .explorer.is-open .explorer-panel { opacity: 1; transform: translateY(0); }
 #result-count { color: #65675f; flex: 0 0 auto; font-size: 0.78rem; margin: 0 0 5px; }
@@ -93,7 +94,7 @@ kbd { border: 1px solid var(--line); border-radius: 4px; color: #77786f; font-si
 .filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 5px; }
 .filter { background: transparent; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; flex: 0 0 auto; font-size: 0.72rem; padding: 9px 13px; transition: background 150ms ease, border-color 150ms ease, color 150ms ease, opacity 120ms ease; }
 .filter:hover, .filter.active { background: var(--ink); border-color: var(--ink); color: var(--white); }
-.explorer.is-building .filter, .explorer.is-collapsing .filter { opacity: 0; }
+.explorer.is-preparing .filter, .explorer.is-building .filter, .explorer.is-collapsing .filter { opacity: 0; }
 .explorer.is-building.is-settling .filter { opacity: 1; }
 .category-piece { align-items: center; background: var(--acid); border: 1px solid var(--ink); box-sizing: border-box; display: flex; font-size: .72rem; font-weight: 500; justify-content: center; overflow: hidden; pointer-events: none; position: fixed; white-space: nowrap; z-index: 100; }
 .category-piece span { opacity: 0; padding: 0 13px; }
