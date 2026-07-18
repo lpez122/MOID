@@ -143,6 +143,7 @@ async function animateFilterPieces(direction, pillRect) {
 
   const animations = targets.map((target, index) => {
     const targetRect = target.getBoundingClientRect();
+    const targetStyle = getComputedStyle(target);
     const sliceLeft = pillRect.left + (index * sliceWidth);
     const sliceTop = pillRect.top;
     const isFirst = index === 0;
@@ -164,14 +165,21 @@ async function animateFilterPieces(direction, pillRect) {
     piece.style.height = `${startsAtPill ? sliceHeight : targetRect.height}px`;
     piece.style.borderRadius = startsAtPill ? sliceRadius : "999px";
     piece.style.borderWidth = startsAtPill ? sliceBorder : "1px";
+    piece.style.fontFamily = targetStyle.fontFamily;
+    piece.style.fontSize = targetStyle.fontSize;
+    piece.style.fontWeight = targetStyle.fontWeight;
+    piece.style.letterSpacing = targetStyle.letterSpacing;
+    piece.style.lineHeight = targetStyle.lineHeight;
     document.body.append(piece);
 
     const xKick = (index - ((targets.length - 1) / 2)) * 2.5;
     const yKick = index % 2 === 0 ? -14 : 14;
     const pillFrame = {
       background: "#d9ff57",
+      borderColor: "#151713",
       borderRadius: sliceRadius,
       borderWidth: sliceBorder,
+      color: "#151713",
       height: `${sliceHeight}px`,
       left: `${sliceLeft}px`,
       top: `${sliceTop}px`,
@@ -179,17 +187,21 @@ async function animateFilterPieces(direction, pillRect) {
     };
     const kickFrame = {
       background: "#d9ff57",
+      borderColor: "#151713",
       borderRadius: "6px",
       borderWidth: "1px",
+      color: "#151713",
       height: `${sliceHeight}px`,
       left: `${sliceLeft + xKick}px`,
       top: `${sliceTop + yKick}px`,
       width: `${sliceWidth}px`
     };
     const targetFrame = {
-      background: target.classList.contains("active") ? "#151713" : "#fffef9",
+      background: targetStyle.backgroundColor,
+      borderColor: targetStyle.borderColor,
       borderRadius: "999px",
       borderWidth: "1px",
+      color: targetStyle.color,
       height: `${targetRect.height}px`,
       left: `${targetRect.left}px`,
       top: `${targetRect.top}px`,
