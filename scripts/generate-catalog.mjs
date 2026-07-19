@@ -16,6 +16,12 @@ const jpegQuality = 72;
 const excludedConcepts = new Set([
   "animals/crustaceans/blue_crab"
 ]);
+const conceptReplacements = new Map([
+  [
+    "electronics_and_appliances/phones_and_tablets/satellite_phone",
+    "electronics_and_appliances/phones_and_tablets/smartphone"
+  ]
+]);
 const excludedImages = new Set([
   "animals/crustaceans/crab/crab_3.jpg",
   "animals/crustaceans/crab/crab_4.jpg",
@@ -124,6 +130,17 @@ while (selectedConcepts.length < conceptTarget) {
 
 if (selectedConcepts.length !== conceptTarget) {
   throw new Error(`Could only select ${selectedConcepts.length} eligible concepts; expected ${conceptTarget}.`);
+}
+
+for (const [replacedPath, replacementPath] of conceptReplacements) {
+  const replacedIndex = selectedConcepts.findIndex((concept) =>
+    `${concept.category}/${concept.collection}/${concept.concept}` === replacedPath);
+  if (replacedIndex === -1) continue;
+
+  const replacement = eligible.find((concept) =>
+    `${concept.category}/${concept.collection}/${concept.concept}` === replacementPath);
+  if (!replacement) throw new Error(`Replacement concept is unavailable: ${replacementPath}`);
+  if (!selectedConcepts.includes(replacement)) selectedConcepts[replacedIndex] = replacement;
 }
 
 const jobs = selectedConcepts.flatMap((concept) => concept.files
