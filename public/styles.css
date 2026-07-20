@@ -159,6 +159,17 @@ kbd { border: 1px solid var(--line); border-radius: 4px; color: #77786f; font-si
 .access-bottom { align-items: end; display: flex; justify-content: space-between; margin-top: 12vh; }
 .access-bottom p { line-height: 1.5; margin: 0; max-width: 510px; }
 .access-bottom a { border-bottom: 1px solid currentColor; font-weight: 700; padding-bottom: 6px; }
+.affiliation { align-items: center; background: var(--white); border-bottom: 1px solid var(--line); display: grid; gap: clamp(32px, 6vw, 90px); grid-template-columns: minmax(220px, .75fr) minmax(0, 1.25fr); padding: clamp(38px, 5vw, 68px) 4vw; }
+.affiliation-copy p { margin: 0; }
+.affiliation-kicker { font-size: .64rem; font-weight: 750; letter-spacing: .13em; margin-bottom: 11px !important; text-transform: uppercase; }
+.affiliation-copy p:last-child { color: #65675f; font-size: .82rem; line-height: 1.45; max-width: 310px; }
+.affiliation-marks { align-items: center; display: flex; gap: clamp(20px, 3vw, 42px); justify-content: flex-end; }
+.affiliation-marks a { display: flex; transition: opacity 180ms ease, transform 180ms ease; }
+.affiliation-marks a:hover { opacity: .72; transform: translateY(-1px); }
+.affiliation-cvl img { display: block; height: auto; width: clamp(230px, 25vw, 330px); }
+.affiliation-divider { background: var(--line); height: 42px; width: 1px; }
+.affiliation-utd { align-items: center; background: var(--green); min-height: 58px; padding: 12px 18px; }
+.affiliation-utd img { display: block; height: auto; width: clamp(240px, 23vw, 300px); }
 footer { align-items: center; display: flex; font-size: .75rem; justify-content: space-between; padding: 34px 4vw; }
 footer p { margin: 0; }
 
@@ -208,6 +219,13 @@ dialog::backdrop { background: rgba(15,17,14,.72); backdrop-filter: blur(4px); }
   .taxonomy-concepts { border-left: 0; padding: 0 0 15px 12px; }
   .taxonomy-concepts::before { display: none; }
   .access-bottom { align-items: start; flex-direction: column; gap: 45px; }
+  .affiliation { display: block; padding-left: 5vw; padding-right: 5vw; }
+  .affiliation-copy p:last-child { max-width: none; }
+  .affiliation-marks { align-items: flex-start; flex-direction: column; gap: 22px; justify-content: flex-start; margin-top: 34px; }
+  .affiliation-cvl img { max-width: 100%; width: 310px; }
+  .affiliation-divider { height: 1px; width: 100%; }
+  .affiliation-utd { max-width: 100%; }
+  .affiliation-utd img { max-width: 100%; width: 300px; }
   footer > p:nth-child(2) { display: none; }
 }
 
