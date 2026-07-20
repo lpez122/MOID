@@ -146,6 +146,7 @@ async function animateFilterPieces(direction, pillRect) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   const targets = [...elements.filters.querySelectorAll(".filter")];
+  const green = getComputedStyle(document.documentElement).getPropertyValue("--green").trim();
   const duration = 720;
   const maximumDelay = direction === "open"
     ? (targets.length - 1) * 18
@@ -187,22 +188,22 @@ async function animateFilterPieces(direction, pillRect) {
     const xKick = (index - ((targets.length - 1) / 2)) * 2.5;
     const yKick = index % 2 === 0 ? -14 : 14;
     const pillFrame = {
-      background: "#d9ff57",
+      background: green,
       borderColor: "#151713",
       borderRadius: sliceRadius,
       borderWidth: sliceBorder,
-      color: "#151713",
+      color: "#fffef9",
       height: `${sliceHeight}px`,
       left: `${sliceLeft}px`,
       top: `${sliceTop}px`,
       width: `${sliceWidth}px`
     };
     const kickFrame = {
-      background: "#d9ff57",
+      background: green,
       borderColor: "#151713",
       borderRadius: "6px",
       borderWidth: "1px",
-      color: "#151713",
+      color: "#fffef9",
       height: `${sliceHeight}px`,
       left: `${sliceLeft + xKick}px`,
       top: `${sliceTop + yKick}px`,
