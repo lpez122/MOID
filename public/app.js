@@ -356,6 +356,21 @@ const taxonomyColors = [
   "--taxonomy-5",
   "--taxonomy-6"
 ];
+const taxonomyShortLabels = {
+  animals: "Animals",
+  arts_music_and_media: "Arts, Music & Media",
+  body_clothing_and_accessories: "Clothing & Accessories",
+  electronics_and_appliances: "Electronics",
+  food_and_drink: "Food & Drink",
+  furniture_and_home_goods: "Furniture & Home",
+  health_and_medical: "Health & Medical",
+  natural_objects_and_materials: "Nature & Materials",
+  plants_and_organisms: "Plants & Organisms",
+  sports_toys_and_recreation: "Sports & Recreation",
+  tools_and_hardware: "Tools & Hardware",
+  travel_and_transit: "Travel & Transit",
+  vehicles_and_transport: "Vehicles & Transport"
+};
 
 function prepareTaxonomyNode(node, parent = null) {
   node.parent = parent;
@@ -499,7 +514,11 @@ function drawTaxonomyLabel(group, node, relativeDepth, inner, outer) {
     "text-anchor": flipped ? "end" : "start",
     transform: `rotate(${degrees} 360 360) translate(${radius + 4} 360) rotate(${flipped ? 180 : 0})`
   });
-  label.textContent = node.label.length > 25 ? `${node.label.slice(0, 23)}…` : node.label;
+  const displayLabel = node.depth === 1
+    ? taxonomyShortLabels[node.slug] ?? node.label
+    : node.label;
+  label.textContent =
+    displayLabel.length > 25 ? `${displayLabel.slice(0, 23)}…` : displayLabel;
   group.append(label);
 }
 
