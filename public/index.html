@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="MOID is a massive, research-ready database of object images." />
     <title>MOID — Massive Object Image Database</title>
-    <link rel="stylesheet" href="./styles.css?v=20260725-taxonomy-frequency" />
-    <script type="module" src="./app.js?v=20260725-taxonomy-frequency"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260725-taxonomy-search" />
+    <script type="module" src="./app.js?v=20260725-taxonomy-search"></script>
   </head>
   <body>
     <header class="site-header">
@@ -92,6 +92,24 @@
           <div><strong id="taxonomy-image-count">—</strong><span>Images represented</span></div>
           <div><strong id="taxonomy-covered-count">—</strong><span>Level-3 labels covered</span></div>
           <div><strong id="taxonomy-lacking-count">—</strong><span id="taxonomy-lacking-label">Labels with 10 or fewer</span></div>
+        </div>
+        <div class="taxonomy-search">
+          <label for="taxonomy-search">Find a category or object label</label>
+          <div class="taxonomy-search-field">
+            <span aria-hidden="true">⌕</span>
+            <input
+              id="taxonomy-search"
+              type="search"
+              placeholder="Search clothes hanger, mammals, kitchen tools…"
+              autocomplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="taxonomy-search-results"
+              aria-expanded="false"
+            />
+            <span class="taxonomy-search-total" id="taxonomy-search-total">— labels</span>
+          </div>
+          <div class="taxonomy-search-results" id="taxonomy-search-results" role="listbox" hidden></div>
         </div>
         <div class="taxonomy-toolbar">
           <label class="taxonomy-control" for="taxonomy-focus">

@@ -11,7 +11,10 @@ const state = {
   taxonomyRoot: null,
   taxonomyFocus: null,
   taxonomySelected: null,
-  taxonomyThreshold: 10
+  taxonomyThreshold: 10,
+  taxonomySearchNodes: [],
+  taxonomySearchMatches: [],
+  taxonomySearchIndex: -1
 };
 
 const elements = {
@@ -38,7 +41,10 @@ const elements = {
   taxonomyLackingCount: document.querySelector("#taxonomy-lacking-count"),
   taxonomyLackingLabel: document.querySelector("#taxonomy-lacking-label"),
   taxonomySparseLegend: document.querySelector("#taxonomy-sparse-legend"),
-  taxonomyPresentLegend: document.querySelector("#taxonomy-present-legend")
+  taxonomyPresentLegend: document.querySelector("#taxonomy-present-legend"),
+  taxonomySearch: document.querySelector("#taxonomy-search"),
+  taxonomySearchResults: document.querySelector("#taxonomy-search-results"),
+  taxonomySearchTotal: document.querySelector("#taxonomy-search-total")
 };
 
 const format = (number) => new Intl.NumberFormat("en-US").format(number);
@@ -507,6 +513,114 @@ function zoomTaxonomy(node) {
   renderTaxonomy();
 }
 
+function taxonomyNodeType(node) {
+  if (node.depth === 1) return "Category";
+  if (node.depth === 2) return "Group";
+  return "Object label";
+}
+
+function normalizeTaxonomySearch(value) {
+  return value
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function closeTaxonomySearchResults() {
+  state.taxonomySearchIndex = -1;
+  elements.taxonomySearchResults.hidden = true;
+  elements.taxonomySearch.setAttribute("aria-expanded", "false");
+  elements.taxonomySearch.removeAttribute("aria-activedescendant");
+}
+
+function updateTaxonomySearchActiveResult() {
+  const buttons = elements.taxonomySearchResults.querySelectorAll(".taxonomy-search-result");
+  buttons.forEach((button, index) => {
+    const active = index === state.taxonomySearchIndex;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+    if (active) {
+      elements.taxonomySearch.setAttribute("aria-activedescendant", button.id);
+      button.scrollIntoView({ block: "nearest" });
+    }
+  });
+}
+
+function selectTaxonomySearchNode(node) {
+  state.taxonomySelected = node;
+  state.taxonomyFocus = node.children.length ? node : node.parent;
+  const levelOne = node.depth === 1
+    ? node
+    : node.depth > 1 ? (node.depth === 2 ? node.parent : node.parent.parent) : null;
+  elements.taxonomyFocus.value = levelOne ? levelOne.slug : "all";
+  elements.taxonomySearch.value = node.label;
+  closeTaxonomySearchResults();
+  renderTaxonomy();
+  setTaxonomyDetail(node);
+}
+
+function renderTaxonomySearchResults() {
+  const query = normalizeTaxonomySearch(elements.taxonomySearch.value);
+  if (!query) {
+    state.taxonomySearchMatches = [];
+    closeTaxonomySearchResults();
+    return;
+  }
+
+  state.taxonomySearchMatches = state.taxonomySearchNodes
+    .map((node) => {
+      const label = normalizeTaxonomySearch(node.label);
+      const path = normalizeTaxonomySearch(node.path);
+      let rank = 5;
+      if (label === query) rank = 0;
+      else if (label.startsWith(query)) rank = 1;
+      else if (label.includes(query)) rank = 2;
+      else if (path.includes(query)) rank = 3;
+      return { node, rank };
+    })
+    .filter((match) => match.rank < 5)
+    .sort((a, b) =>
+      a.rank - b.rank ||
+      b.node.total - a.node.total ||
+      a.node.label.localeCompare(b.node.label)
+    )
+    .slice(0, 10)
+    .map((match) => match.node);
+
+  state.taxonomySearchIndex = -1;
+  elements.taxonomySearchResults.replaceChildren();
+  if (state.taxonomySearchMatches.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "taxonomy-search-empty";
+    empty.textContent = "No taxonomy labels match that search.";
+    elements.taxonomySearchResults.append(empty);
+  } else {
+    state.taxonomySearchMatches.forEach((node, index) => {
+      const button = document.createElement("button");
+      button.className = "taxonomy-search-result";
+      button.id = `taxonomy-search-option-${index}`;
+      button.type = "button";
+      button.setAttribute("role", "option");
+      button.setAttribute("aria-selected", "false");
+
+      const label = document.createElement("strong");
+      label.textContent = node.label;
+      const path = document.createElement("small");
+      path.textContent = `${taxonomyNodeType(node)} · ${node.path}`;
+      const count = document.createElement("b");
+      count.textContent = `${format(node.total)} image${node.total === 1 ? "" : "s"}`;
+      button.append(label, path, count);
+      button.addEventListener("pointerdown", (event) => event.preventDefault());
+      button.addEventListener("click", () => selectTaxonomySearchNode(node));
+      elements.taxonomySearchResults.append(button);
+    });
+  }
+
+  elements.taxonomySearchResults.hidden = false;
+  elements.taxonomySearch.setAttribute("aria-expanded", "true");
+}
+
 function renderTaxonomy() {
   const focus = state.taxonomyFocus;
   const nodes = [];
@@ -547,6 +661,7 @@ function renderTaxonomy() {
     ) {
       path.classList.add("is-muted");
     }
+    if (node === state.taxonomySelected) path.classList.add("is-selected");
     path.addEventListener("pointermove", (event) => showTaxonomyTooltip(event, node));
     path.addEventListener("pointerleave", hideTaxonomyTooltip);
     path.addEventListener("focus", () => setTaxonomyDetail(node));
@@ -622,6 +737,10 @@ function updateTaxonomyThreshold() {
 function initializeTaxonomyChart() {
   state.taxonomyRoot = buildTaxonomyTree();
   state.taxonomyFocus = state.taxonomyRoot;
+  state.taxonomySearchNodes = state.taxonomyRoot.children.flatMap((category) => [
+    category,
+    ...category.children.flatMap((group) => [group, ...group.children])
+  ]);
   elements.taxonomyFocus.replaceChildren(new Option("All categories", "all"));
   state.taxonomyRoot.children.forEach((category) => {
     elements.taxonomyFocus.append(new Option(category.label, category.slug));
@@ -629,6 +748,8 @@ function initializeTaxonomyChart() {
   elements.taxonomyImageCount.textContent = format(state.taxonomyFrequency.stats.images);
   elements.taxonomyCoveredCount.textContent =
     `${format(state.taxonomyFrequency.stats.coveredConcepts)} / ${format(state.taxonomyFrequency.stats.concepts)}`;
+  elements.taxonomySearchTotal.textContent =
+    `${format(state.taxonomyFrequency.stats.concepts)} labels`;
   setTaxonomyDetail(state.taxonomyRoot);
   updateTaxonomyThreshold();
 }
@@ -677,6 +798,28 @@ elements.taxonomyFocus.addEventListener("change", () => {
       (category) => category.slug === elements.taxonomyFocus.value
     );
   zoomTaxonomy(node);
+});
+elements.taxonomySearch.addEventListener("input", renderTaxonomySearchResults);
+elements.taxonomySearch.addEventListener("focus", renderTaxonomySearchResults);
+elements.taxonomySearch.addEventListener("keydown", (event) => {
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    if (state.taxonomySearchMatches.length === 0) return;
+    event.preventDefault();
+    const direction = event.key === "ArrowDown" ? 1 : -1;
+    state.taxonomySearchIndex =
+      (state.taxonomySearchIndex + direction + state.taxonomySearchMatches.length) %
+      state.taxonomySearchMatches.length;
+    updateTaxonomySearchActiveResult();
+  }
+  if (event.key === "Enter" && state.taxonomySearchMatches.length > 0) {
+    event.preventDefault();
+    const index = state.taxonomySearchIndex < 0 ? 0 : state.taxonomySearchIndex;
+    selectTaxonomySearchNode(state.taxonomySearchMatches[index]);
+  }
+  if (event.key === "Escape") closeTaxonomySearchResults();
+});
+document.addEventListener("pointerdown", (event) => {
+  if (!event.target.closest(".taxonomy-search")) closeTaxonomySearchResults();
 });
 elements.taxonomyThreshold.addEventListener("input", updateTaxonomyThreshold);
 elements.taxonomyOnlyLacking.addEventListener("change", renderTaxonomy);
