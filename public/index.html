@@ -93,6 +93,20 @@
           <div><strong id="taxonomy-covered-count">—</strong><span>Level-3 labels covered</span></div>
           <div><strong id="taxonomy-lacking-count">—</strong><span id="taxonomy-lacking-label">Labels with 10 or fewer</span></div>
         </div>
+        <div class="taxonomy-toolbar">
+          <label class="taxonomy-control" for="taxonomy-focus">
+            <span>Taxonomy focus</span>
+            <select id="taxonomy-focus"></select>
+          </label>
+          <label class="taxonomy-control taxonomy-threshold" for="taxonomy-threshold">
+            <span>Lacking threshold: <strong id="taxonomy-threshold-value">10</strong> images</span>
+            <input id="taxonomy-threshold" type="range" min="0" max="100" step="1" value="10" />
+          </label>
+          <label class="taxonomy-check" for="taxonomy-only-lacking">
+            <input id="taxonomy-only-lacking" type="checkbox" />
+            <span>Emphasize lacking</span>
+          </label>
+        </div>
         <div class="taxonomy-search">
           <label for="taxonomy-search">Find a category or object label</label>
           <div class="taxonomy-search-field">
@@ -110,20 +124,6 @@
             <span class="taxonomy-search-total" id="taxonomy-search-total">— labels</span>
           </div>
           <div class="taxonomy-search-results" id="taxonomy-search-results" role="listbox" hidden></div>
-        </div>
-        <div class="taxonomy-toolbar">
-          <label class="taxonomy-control" for="taxonomy-focus">
-            <span>Taxonomy focus</span>
-            <select id="taxonomy-focus"></select>
-          </label>
-          <label class="taxonomy-control taxonomy-threshold" for="taxonomy-threshold">
-            <span>Lacking threshold: <strong id="taxonomy-threshold-value">10</strong> images</span>
-            <input id="taxonomy-threshold" type="range" min="0" max="100" step="1" value="10" />
-          </label>
-          <label class="taxonomy-check" for="taxonomy-only-lacking">
-            <input id="taxonomy-only-lacking" type="checkbox" />
-            <span>Emphasize lacking</span>
-          </label>
         </div>
         <p class="taxonomy-detail" id="taxonomy-detail" aria-live="polite">Loading taxonomy frequencies…</p>
         <div class="taxonomy-chart-wrap">
