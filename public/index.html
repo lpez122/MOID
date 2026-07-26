@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="MOID is a massive, research-ready database of object images." />
     <title>MOID — Massive Object Image Database</title>
-    <link rel="stylesheet" href="./styles.css?v=20260720-affiliations" />
-    <script type="module" src="./app.js?v=20260719-utd-colors"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260725-taxonomy-frequency" />
+    <script type="module" src="./app.js?v=20260725-taxonomy-frequency"></script>
   </head>
   <body>
     <header class="site-header">
@@ -82,26 +82,41 @@
       </section>
 
       <section class="taxonomy" id="taxonomy" aria-labelledby="taxonomy-title">
-        <p class="section-kicker">03 / Taxonomy explorer</p>
+        <p class="section-kicker">03 / Taxonomy frequency</p>
         <div class="taxonomy-heading">
-          <h2 id="taxonomy-title">Trace the<br /><em>taxonomy.</em></h2>
-          <p>Browse the complete organization of MOID, from broad categories to individual object labels.</p>
+          <h2 id="taxonomy-title">Read the<br /><em>coverage.</em></h2>
+          <p>Scan image frequency across the complete MOID hierarchy, from broad categories to individual object labels.</p>
         </div>
 
-        <div class="taxonomy-toolbar">
-          <label class="taxonomy-search" for="taxonomy-search">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
-            <input id="taxonomy-search" type="search" placeholder="Search the full taxonomy" autocomplete="off" />
-          </label>
-          <div class="taxonomy-actions" aria-label="Taxonomy display controls">
-            <button id="taxonomy-expand-level" type="button">Expand one level</button>
-            <button id="taxonomy-expand-all" type="button">Expand all</button>
-            <button id="taxonomy-collapse-all" type="button">Collapse all</button>
-          </div>
+        <div class="taxonomy-metrics" aria-label="Taxonomy coverage summary">
+          <div><strong id="taxonomy-image-count">—</strong><span>Images represented</span></div>
+          <div><strong id="taxonomy-covered-count">—</strong><span>Level-3 labels covered</span></div>
+          <div><strong id="taxonomy-lacking-count">—</strong><span id="taxonomy-lacking-label">Labels with 10 or fewer</span></div>
         </div>
-        <p class="taxonomy-status" id="taxonomy-status" aria-live="polite">Loading the taxonomy…</p>
-        <div class="taxonomy-tree" id="taxonomy-tree" aria-label="MOID taxonomy"></div>
-        <p class="taxonomy-empty" id="taxonomy-empty" hidden>No taxonomy labels match that search.</p>
+        <div class="taxonomy-toolbar">
+          <label class="taxonomy-control" for="taxonomy-focus">
+            <span>Taxonomy focus</span>
+            <select id="taxonomy-focus"></select>
+          </label>
+          <label class="taxonomy-control taxonomy-threshold" for="taxonomy-threshold">
+            <span>Lacking threshold: <strong id="taxonomy-threshold-value">10</strong> images</span>
+            <input id="taxonomy-threshold" type="range" min="0" max="100" step="1" value="10" />
+          </label>
+          <label class="taxonomy-check" for="taxonomy-only-lacking">
+            <input id="taxonomy-only-lacking" type="checkbox" />
+            <span>Emphasize lacking</span>
+          </label>
+        </div>
+        <p class="taxonomy-detail" id="taxonomy-detail" aria-live="polite">Loading taxonomy frequencies…</p>
+        <div class="taxonomy-chart-wrap">
+          <svg id="taxonomy-chart" viewBox="0 0 720 720" role="img" aria-label="Circular MOID taxonomy frequency chart"></svg>
+          <div class="taxonomy-tooltip" id="taxonomy-tooltip"></div>
+        </div>
+        <div class="taxonomy-legend" aria-label="Frequency legend">
+          <span><i class="taxonomy-key sparse"></i><b id="taxonomy-sparse-legend">1–10 images</b></span>
+          <span><i class="taxonomy-key present"></i><b id="taxonomy-present-legend">More than 10</b></span>
+          <span>Arc width = number of taxonomy labels</span>
+        </div>
       </section>
 
       <section class="access" id="access">

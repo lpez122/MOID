@@ -6,6 +6,7 @@
   "scripts": {
     "catalog": "node scripts/generate-catalog.mjs",
     "taxonomy": "node scripts/generate-taxonomy.mjs",
+    "frequency": "python3 scripts/generate-taxonomy-frequency.py",
     "start": "node server.mjs",
     "dev": "node server.mjs"
   }

@@ -7,10 +7,11 @@ const state = {
   animating: false,
   closedPillRect: null,
   taxonomy: null,
-  taxonomyQuery: "",
-  expandedCategories: new Set(),
-  expandedGroups: new Set(),
-  taxonomyAnimationToken: 0
+  taxonomyFrequency: null,
+  taxonomyRoot: null,
+  taxonomyFocus: null,
+  taxonomySelected: null,
+  taxonomyThreshold: 10
 };
 
 const elements = {
@@ -25,13 +26,19 @@ const elements = {
   loadMore: document.querySelector("#load-more"),
   empty: document.querySelector("#empty"),
   dialog: document.querySelector("#image-dialog"),
-  taxonomyTree: document.querySelector("#taxonomy-tree"),
-  taxonomySearch: document.querySelector("#taxonomy-search"),
-  taxonomyStatus: document.querySelector("#taxonomy-status"),
-  taxonomyEmpty: document.querySelector("#taxonomy-empty"),
-  taxonomyExpandLevel: document.querySelector("#taxonomy-expand-level"),
-  taxonomyExpandAll: document.querySelector("#taxonomy-expand-all"),
-  taxonomyCollapseAll: document.querySelector("#taxonomy-collapse-all")
+  taxonomyChart: document.querySelector("#taxonomy-chart"),
+  taxonomyTooltip: document.querySelector("#taxonomy-tooltip"),
+  taxonomyDetail: document.querySelector("#taxonomy-detail"),
+  taxonomyFocus: document.querySelector("#taxonomy-focus"),
+  taxonomyThreshold: document.querySelector("#taxonomy-threshold"),
+  taxonomyThresholdValue: document.querySelector("#taxonomy-threshold-value"),
+  taxonomyOnlyLacking: document.querySelector("#taxonomy-only-lacking"),
+  taxonomyImageCount: document.querySelector("#taxonomy-image-count"),
+  taxonomyCoveredCount: document.querySelector("#taxonomy-covered-count"),
+  taxonomyLackingCount: document.querySelector("#taxonomy-lacking-count"),
+  taxonomyLackingLabel: document.querySelector("#taxonomy-lacking-label"),
+  taxonomySparseLegend: document.querySelector("#taxonomy-sparse-legend"),
+  taxonomyPresentLegend: document.querySelector("#taxonomy-present-legend")
 };
 
 const format = (number) => new Intl.NumberFormat("en-US").format(number);
@@ -334,222 +341,319 @@ function renderMarquee() {
   }));
 }
 
-function filteredTaxonomy() {
-  const query = state.taxonomyQuery.trim().toLowerCase();
-  if (!query) return state.taxonomy.categories;
+const taxonomyNamespace = "http://www.w3.org/2000/svg";
+const taxonomyColors = [
+  "--taxonomy-1",
+  "--taxonomy-2",
+  "--taxonomy-3",
+  "--taxonomy-4",
+  "--taxonomy-5",
+  "--taxonomy-6"
+];
 
-  return state.taxonomy.categories.flatMap((category) => {
-    if (category.label.toLowerCase().includes(query)) return [category];
+function prepareTaxonomyNode(node, parent = null) {
+  node.parent = parent;
+  node.path = parent && parent.depth > 0 ? `${parent.path} / ${node.label}` : node.label;
+  if (node.children.length === 0) {
+    node.leafCount = 1;
+    node.total = node.count;
+    node.covered = node.count > 0 ? 1 : 0;
+    return;
+  }
+  node.children.forEach((child) => prepareTaxonomyNode(child, node));
+  node.leafCount = node.children.reduce((total, child) => total + child.leafCount, 0);
+  node.total = node.children.reduce((total, child) => total + child.total, 0);
+  node.covered = node.children.reduce((total, child) => total + child.covered, 0);
+}
 
-    const groups = category.groups.flatMap((group) => {
-      if (group.label.toLowerCase().includes(query)) return [group];
-      const concepts = group.concepts.filter((concept) => concept.label.toLowerCase().includes(query));
-      return concepts.length ? [{ ...group, concepts }] : [];
-    });
-    return groups.length ? [{ ...category, groups }] : [];
+function buildTaxonomyTree() {
+  const counts = state.taxonomyFrequency.counts;
+  const root = {
+    slug: "all",
+    label: "All categories",
+    depth: 0,
+    colorIndex: 0,
+    children: state.taxonomy.categories.map((category, categoryIndex) => ({
+      slug: category.slug,
+      label: category.label,
+      depth: 1,
+      colorIndex: categoryIndex % taxonomyColors.length,
+      children: category.groups.map((group) => ({
+        slug: group.slug,
+        label: group.label,
+        depth: 2,
+        colorIndex: categoryIndex % taxonomyColors.length,
+        children: group.concepts.map((concept) => ({
+          slug: concept.slug,
+          label: concept.label,
+          count: counts[concept.id] ?? 0,
+          depth: 3,
+          colorIndex: categoryIndex % taxonomyColors.length,
+          children: []
+        }))
+      }))
+    }))
+  };
+  prepareTaxonomyNode(root);
+  return root;
+}
+
+function makeTaxonomySvgElement(tag, attributes = {}) {
+  const element = document.createElementNS(taxonomyNamespace, tag);
+  Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
+  return element;
+}
+
+function taxonomyPolar(radius, angle) {
+  return [
+    360 + radius * Math.cos(angle - Math.PI / 2),
+    360 + radius * Math.sin(angle - Math.PI / 2)
+  ];
+}
+
+function taxonomyArcPath(start, end, inner, outer) {
+  const gap = Math.min(.0025, Math.max(0, (end - start) * .08));
+  const startAngle = start + gap;
+  const endAngle = end - gap;
+  const span = Math.max(.0001, endAngle - startAngle);
+  const outerStart = taxonomyPolar(outer, startAngle);
+  const outerEnd = taxonomyPolar(outer, endAngle);
+  const innerEnd = taxonomyPolar(inner, endAngle);
+  const innerStart = taxonomyPolar(inner, startAngle);
+  const largeArc = span > Math.PI ? 1 : 0;
+  return [
+    `M${outerStart[0]},${outerStart[1]}`,
+    `A${outer},${outer} 0 ${largeArc} 1 ${outerEnd[0]},${outerEnd[1]}`,
+    `L${innerEnd[0]},${innerEnd[1]}`,
+    `A${inner},${inner} 0 ${largeArc} 0 ${innerStart[0]},${innerStart[1]} Z`
+  ].join(" ");
+}
+
+function layoutTaxonomy(node, start, end, output) {
+  let cursor = start;
+  node.children.forEach((child) => {
+    const width = (end - start) * child.leafCount / node.leafCount;
+    child.x0 = cursor;
+    child.x1 = cursor + width;
+    output.push(child);
+    layoutTaxonomy(child, child.x0, child.x1, output);
+    cursor += width;
   });
 }
 
-function setCategoryExpanded(categoryElement, expanded) {
-  categoryElement.classList.toggle("is-expanded", expanded);
-  categoryElement.querySelector(":scope > .taxonomy-root").setAttribute("aria-expanded", String(expanded));
+function taxonomyNodeStatus(node) {
+  if (node.depth < 3) {
+    return `${format(node.covered)} of ${format(node.leafCount)} level-3 labels covered`;
+  }
+  if (node.count === 0) return "absent";
+  if (node.count <= state.taxonomyThreshold) return "lacking";
+  return "represented";
 }
 
-function setGroupExpanded(groupElement, expanded) {
-  groupElement.classList.toggle("is-expanded", expanded);
-  groupElement.querySelector(":scope > .taxonomy-group-button").setAttribute("aria-expanded", String(expanded));
+function taxonomyNodeOpacity(node) {
+  if (node.depth < 3) return node.depth === 1 ? .84 : .5;
+  if (node.count === 0) return .15;
+  if (node.count <= state.taxonomyThreshold) return .32;
+  return Math.min(.96, .48 + Math.log10(node.count + 1) / 5);
 }
 
-function makeTaxonomyButton(className, label, count, expanded, controls) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = className;
-  button.setAttribute("aria-expanded", String(expanded));
-  button.setAttribute("aria-controls", controls);
+function setTaxonomyDetail(node) {
+  state.taxonomySelected = node;
+  const imageLabel = `${format(node.total)} image${node.total === 1 ? "" : "s"}`;
+  elements.taxonomyDetail.innerHTML =
+    `<strong>${node.path}</strong>&nbsp;&nbsp;·&nbsp;&nbsp;${imageLabel}` +
+    `&nbsp;&nbsp;·&nbsp;&nbsp;${taxonomyNodeStatus(node)}`;
+}
 
-  const name = document.createElement("span");
-  name.className = "taxonomy-node-name";
-  name.textContent = label;
-  const meta = document.createElement("span");
-  meta.className = "taxonomy-node-meta";
-  meta.textContent = format(count);
-  const symbol = document.createElement("span");
-  symbol.className = "taxonomy-node-symbol";
-  symbol.setAttribute("aria-hidden", "true");
-  symbol.textContent = "+";
-  button.append(name, meta, symbol);
-  return button;
+function showTaxonomyTooltip(event, node) {
+  const bounds = elements.taxonomyChart.parentElement.getBoundingClientRect();
+  const left = Math.min(event.clientX - bounds.left, bounds.width - 295);
+  elements.taxonomyTooltip.innerHTML =
+    `<b>${node.path}</b>${format(node.total)} image${node.total === 1 ? "" : "s"}` +
+    `<br />${taxonomyNodeStatus(node)}`;
+  elements.taxonomyTooltip.style.left = `${Math.max(0, left)}px`;
+  elements.taxonomyTooltip.style.top = `${Math.max(0, event.clientY - bounds.top)}px`;
+  elements.taxonomyTooltip.style.opacity = "1";
+}
+
+function hideTaxonomyTooltip() {
+  elements.taxonomyTooltip.style.opacity = "0";
+}
+
+function drawTaxonomyLabel(group, node, relativeDepth, inner, outer) {
+  const angle = node.x1 - node.x0;
+  const radius = (inner + outer) / 2;
+  if (angle * radius < 48 || (relativeDepth === 3 && angle * radius < 74)) return;
+  const midpoint = (node.x0 + node.x1) / 2;
+  const degrees = midpoint * 180 / Math.PI - 90;
+  const flipped = degrees > 90 && degrees < 270;
+  const label = makeTaxonomySvgElement("text", {
+    class: "taxonomy-arc-label",
+    dy: ".32em",
+    "text-anchor": flipped ? "end" : "start",
+    transform: `rotate(${degrees} 360 360) translate(${radius + 4} 360) rotate(${flipped ? 180 : 0})`
+  });
+  label.textContent = node.label.length > 25 ? `${node.label.slice(0, 23)}…` : node.label;
+  group.append(label);
+}
+
+function zoomTaxonomy(node) {
+  state.taxonomyFocus = node.children.length ? node : node.parent;
+  const levelOne = state.taxonomyFocus.depth === 1
+    ? state.taxonomyFocus
+    : state.taxonomyFocus.depth > 1 ? state.taxonomyFocus.parent : null;
+  elements.taxonomyFocus.value = levelOne ? levelOne.slug : "all";
+  setTaxonomyDetail(state.taxonomyFocus);
+  renderTaxonomy();
 }
 
 function renderTaxonomy() {
-  const categories = filteredTaxonomy();
-  const searching = Boolean(state.taxonomyQuery.trim());
-  let visibleGroups = 0;
-  let visibleConcepts = 0;
+  const focus = state.taxonomyFocus;
+  const nodes = [];
+  layoutTaxonomy(focus, 0, Math.PI * 2, nodes);
+  const maxRelativeDepth = Math.max(1, 3 - focus.depth);
+  const innerRadius = 86;
+  const outerRadius = 334;
+  const ringWidth = (outerRadius - innerRadius) / maxRelativeDepth;
+  const arcs = makeTaxonomySvgElement("g");
+  const labels = makeTaxonomySvgElement("g");
 
-  const categoryElements = categories.map((category, categoryIndex) => {
-    visibleGroups += category.groups.length;
-    const conceptCount = category.groups.reduce((total, group) => total + group.concepts.length, 0);
-    visibleConcepts += conceptCount;
-    const categoryElement = document.createElement("article");
-    categoryElement.className = "taxonomy-category";
-    categoryElement.dataset.category = category.id;
-    categoryElement.style.setProperty("--branch-index", categoryIndex);
-    const categoryDrawerId = `taxonomy-category-${category.id}`;
-    const categoryExpanded = searching || state.expandedCategories.has(category.id);
-    const categoryButton = makeTaxonomyButton(
-      "taxonomy-root",
-      category.label,
-      conceptCount,
-      categoryExpanded,
-      categoryDrawerId
-    );
-    categoryButton.addEventListener("click", () => {
-      const expanded = !categoryElement.classList.contains("is-expanded");
-      if (expanded) state.expandedCategories.add(category.id);
-      else state.expandedCategories.delete(category.id);
-      setCategoryExpanded(categoryElement, expanded);
+  elements.taxonomyChart.replaceChildren();
+  nodes.forEach((node) => {
+    const relativeDepth = node.depth - focus.depth;
+    if (relativeDepth < 1 || relativeDepth > maxRelativeDepth) return;
+    const inner = innerRadius + (relativeDepth - 1) * ringWidth + 2;
+    const outer = innerRadius + relativeDepth * ringWidth - 2;
+    const path = makeTaxonomySvgElement("path", {
+      class: "taxonomy-arc",
+      d: taxonomyArcPath(node.x0, node.x1, inner, outer),
+      fill: node.depth === 3 && node.count === 0
+        ? "var(--line)"
+        : `var(${taxonomyColors[node.colorIndex]})`,
+      "fill-opacity": taxonomyNodeOpacity(node),
+      stroke: node.depth === 3 && node.count <= state.taxonomyThreshold
+        ? "var(--orange)"
+        : "var(--paper)",
+      "stroke-opacity": node.depth === 3 && node.count <= state.taxonomyThreshold ? ".7" : ".95",
+      "stroke-width": node.depth === 3 && node.count <= state.taxonomyThreshold ? ".8" : "1",
+      tabindex: "0",
+      role: "button",
+      "aria-label": `${node.path}, ${format(node.total)} images`
     });
-
-    const categoryDrawer = document.createElement("div");
-    categoryDrawer.className = "taxonomy-category-drawer";
-    categoryDrawer.id = categoryDrawerId;
-    const categoryInner = document.createElement("div");
-    categoryInner.className = "taxonomy-category-inner";
-
-    categoryInner.replaceChildren(...category.groups.map((group, groupIndex) => {
-      const groupElement = document.createElement("section");
-      groupElement.className = "taxonomy-group";
-      groupElement.dataset.group = group.id;
-      groupElement.style.setProperty("--branch-index", groupIndex);
-      const groupDrawerId = `taxonomy-group-${group.id.replaceAll("/", "-")}`;
-      const groupExpanded = searching || state.expandedGroups.has(group.id);
-      const groupButton = makeTaxonomyButton(
-        "taxonomy-group-button",
-        group.label,
-        group.concepts.length,
-        groupExpanded,
-        groupDrawerId
-      );
-      groupButton.addEventListener("click", () => {
-        const expanded = !groupElement.classList.contains("is-expanded");
-        if (expanded) state.expandedGroups.add(group.id);
-        else state.expandedGroups.delete(group.id);
-        setGroupExpanded(groupElement, expanded);
-      });
-
-      const groupDrawer = document.createElement("div");
-      groupDrawer.className = "taxonomy-group-drawer";
-      groupDrawer.id = groupDrawerId;
-      const concepts = document.createElement("div");
-      concepts.className = "taxonomy-concepts";
-      concepts.replaceChildren(...group.concepts.map((concept, conceptIndex) => {
-        const item = document.createElement("span");
-        item.className = "taxonomy-concept";
-        item.textContent = concept.label;
-        item.style.setProperty("--concept-index", conceptIndex);
-        return item;
-      }));
-      groupDrawer.append(concepts);
-      groupElement.append(groupButton, groupDrawer);
-      if (groupExpanded) groupElement.classList.add("is-expanded");
-      return groupElement;
-    }));
-
-    categoryDrawer.append(categoryInner);
-    categoryElement.append(categoryButton, categoryDrawer);
-    if (categoryExpanded) categoryElement.classList.add("is-expanded");
-    return categoryElement;
+    if (
+      elements.taxonomyOnlyLacking.checked &&
+      node.depth === 3 &&
+      node.count > state.taxonomyThreshold
+    ) {
+      path.classList.add("is-muted");
+    }
+    path.addEventListener("pointermove", (event) => showTaxonomyTooltip(event, node));
+    path.addEventListener("pointerleave", hideTaxonomyTooltip);
+    path.addEventListener("focus", () => setTaxonomyDetail(node));
+    path.addEventListener("click", () => zoomTaxonomy(node));
+    path.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        zoomTaxonomy(node);
+      }
+    });
+    arcs.append(path);
+    drawTaxonomyLabel(labels, node, relativeDepth, inner, outer);
   });
+  elements.taxonomyChart.append(arcs, labels);
 
-  elements.taxonomyTree.replaceChildren(...categoryElements);
-  elements.taxonomyEmpty.hidden = categories.length !== 0;
-  elements.taxonomyStatus.textContent = searching
-    ? `${format(visibleConcepts)} matching labels across ${format(categories.length)} categories`
-    : `${format(state.taxonomy.stats.categories)} categories · ${format(state.taxonomy.stats.groups)} groups · ${format(state.taxonomy.stats.concepts)} object labels`;
-}
-
-function animateTaxonomyTo({ categories = false, groups = false, collapse = false }) {
-  const token = ++state.taxonomyAnimationToken;
-  const categoryElements = [...elements.taxonomyTree.querySelectorAll(".taxonomy-category")];
-  const groupElements = [...elements.taxonomyTree.querySelectorAll(".taxonomy-group")];
-  const apply = (element, expanded, index, setter) => {
-    setTimeout(() => {
-      if (token === state.taxonomyAnimationToken) setter(element, expanded);
-    }, index * 24);
+  const center = makeTaxonomySvgElement("g", {
+    class: "taxonomy-center",
+    tabindex: "0",
+    role: "button",
+    "aria-label": focus.parent ? `Back to ${focus.parent.label}` : "All categories"
+  });
+  center.append(makeTaxonomySvgElement("circle", { cx: 360, cy: 360, r: 72 }));
+  const title = makeTaxonomySvgElement("text", {
+    class: "taxonomy-center-title",
+    x: 360,
+    y: 349
+  });
+  title.textContent = focus.label.length > 20 ? `${focus.label.slice(0, 18)}…` : focus.label;
+  const images = makeTaxonomySvgElement("text", {
+    class: "taxonomy-center-sub",
+    x: 360,
+    y: 369
+  });
+  images.textContent = `${format(focus.total)} images`;
+  const labelsCovered = makeTaxonomySvgElement("text", {
+    class: "taxonomy-center-sub",
+    x: 360,
+    y: 385
+  });
+  labelsCovered.textContent = `${format(focus.covered)} / ${format(focus.leafCount)} labels`;
+  center.append(title, images, labelsCovered);
+  const goBack = () => {
+    if (focus.parent) zoomTaxonomy(focus.parent);
   };
-
-  if (collapse) {
-    [...groupElements].reverse().forEach((element, index) => {
-      setTimeout(() => {
-        if (token === state.taxonomyAnimationToken) setGroupExpanded(element, false);
-      }, Math.min(index * 8, 360));
-    });
-    const categoryDelay = 500;
-    [...categoryElements].reverse().forEach((element, index) => {
-      setTimeout(() => {
-        if (token === state.taxonomyAnimationToken) setCategoryExpanded(element, false);
-      }, categoryDelay + index * 24);
-    });
-    return;
-  }
-
-  if (categories) categoryElements.forEach((element, index) => apply(element, true, index, setCategoryExpanded));
-  if (groups) {
-    const groupDelay = categories ? Math.min(categoryElements.length * 24, 320) + 180 : 0;
-    groupElements.forEach((element, index) => {
-      setTimeout(() => {
-        if (token === state.taxonomyAnimationToken) setGroupExpanded(element, true);
-      }, groupDelay + Math.min(index * 12, 520));
-    });
-  }
-}
-
-function expandTaxonomyLevel() {
-  const allCategoriesExpanded = state.taxonomy.categories.every((category) => state.expandedCategories.has(category.id));
-  if (!allCategoriesExpanded) {
-    state.taxonomy.categories.forEach((category) => state.expandedCategories.add(category.id));
-    animateTaxonomyTo({ categories: true });
-    return;
-  }
-  state.taxonomy.categories.forEach((category) => {
-    category.groups.forEach((group) => state.expandedGroups.add(group.id));
+  center.addEventListener("click", goBack);
+  center.addEventListener("keydown", (event) => {
+    if ((event.key === "Enter" || event.key === " ") && focus.parent) {
+      event.preventDefault();
+      goBack();
+    }
   });
-  animateTaxonomyTo({ groups: true });
+  elements.taxonomyChart.append(center);
 }
 
-function expandEntireTaxonomy() {
-  state.taxonomy.categories.forEach((category) => {
-    state.expandedCategories.add(category.id);
-    category.groups.forEach((group) => state.expandedGroups.add(group.id));
+function updateTaxonomyThreshold() {
+  state.taxonomyThreshold = Number(elements.taxonomyThreshold.value);
+  const leaves = state.taxonomyRoot.children.flatMap((category) =>
+    category.children.flatMap((group) => group.children)
+  );
+  const lacking = leaves.filter((leaf) => leaf.count <= state.taxonomyThreshold).length;
+  elements.taxonomyThresholdValue.textContent = format(state.taxonomyThreshold);
+  elements.taxonomyLackingCount.textContent = format(lacking);
+  elements.taxonomyLackingLabel.textContent =
+    `Labels with ${format(state.taxonomyThreshold)} or fewer`;
+  elements.taxonomySparseLegend.textContent = state.taxonomyThreshold === 0
+    ? "No sparse band"
+    : `1–${format(state.taxonomyThreshold)} images`;
+  elements.taxonomyPresentLegend.textContent = `More than ${format(state.taxonomyThreshold)}`;
+  setTaxonomyDetail(state.taxonomySelected ?? state.taxonomyFocus);
+  renderTaxonomy();
+}
+
+function initializeTaxonomyChart() {
+  state.taxonomyRoot = buildTaxonomyTree();
+  state.taxonomyFocus = state.taxonomyRoot;
+  elements.taxonomyFocus.replaceChildren(new Option("All categories", "all"));
+  state.taxonomyRoot.children.forEach((category) => {
+    elements.taxonomyFocus.append(new Option(category.label, category.slug));
   });
-  animateTaxonomyTo({ categories: true, groups: true });
-}
-
-function collapseTaxonomy() {
-  state.expandedGroups.clear();
-  state.expandedCategories.clear();
-  animateTaxonomyTo({ collapse: true });
+  elements.taxonomyImageCount.textContent = format(state.taxonomyFrequency.stats.images);
+  elements.taxonomyCoveredCount.textContent =
+    `${format(state.taxonomyFrequency.stats.coveredConcepts)} / ${format(state.taxonomyFrequency.stats.concepts)}`;
+  setTaxonomyDetail(state.taxonomyRoot);
+  updateTaxonomyThreshold();
 }
 
 async function init() {
   try {
-    const [catalogResponse, taxonomyResponse] = await Promise.all([
+    const [catalogResponse, taxonomyResponse, taxonomyFrequencyResponse] = await Promise.all([
       fetch("./catalog.json"),
-      fetch("./taxonomy.json?v=20260718-taxonomy")
+      fetch("./taxonomy.json?v=20260718-taxonomy"),
+      fetch("./taxonomy-frequency.json?v=20260725-frequency")
     ]);
     if (!catalogResponse.ok) throw new Error("Catalog unavailable");
     if (!taxonomyResponse.ok) throw new Error("Taxonomy unavailable");
-    [state.catalog, state.taxonomy] = await Promise.all([
+    if (!taxonomyFrequencyResponse.ok) throw new Error("Taxonomy frequencies unavailable");
+    [state.catalog, state.taxonomy, state.taxonomyFrequency] = await Promise.all([
       catalogResponse.json(),
-      taxonomyResponse.json()
+      taxonomyResponse.json(),
+      taxonomyFrequencyResponse.json()
     ]);
     document.querySelector("#image-count").textContent = format(state.catalog.stats.totalImages ?? 24592);
     document.querySelector("#concept-count").textContent = format(state.taxonomy.stats.concepts);
     document.querySelector("#category-count").textContent = format(state.taxonomy.stats.categories);
     renderMarquee();
     renderFilters();
-    renderTaxonomy();
+    initializeTaxonomyChart();
     elements.resultCount.textContent = `${format(state.catalog.stats.concepts)} object labels available to preview`;
   } catch (error) {
     elements.resultCount.textContent = "Could not load the image catalog.";
@@ -566,17 +670,16 @@ elements.search.addEventListener("input", (event) => {
     renderGallery();
   }, 120);
 });
-let taxonomySearchTimer;
-elements.taxonomySearch.addEventListener("input", (event) => {
-  clearTimeout(taxonomySearchTimer);
-  taxonomySearchTimer = setTimeout(() => {
-    state.taxonomyQuery = event.target.value;
-    renderTaxonomy();
-  }, 120);
+elements.taxonomyFocus.addEventListener("change", () => {
+  const node = elements.taxonomyFocus.value === "all"
+    ? state.taxonomyRoot
+    : state.taxonomyRoot.children.find(
+      (category) => category.slug === elements.taxonomyFocus.value
+    );
+  zoomTaxonomy(node);
 });
-elements.taxonomyExpandLevel.addEventListener("click", expandTaxonomyLevel);
-elements.taxonomyExpandAll.addEventListener("click", expandEntireTaxonomy);
-elements.taxonomyCollapseAll.addEventListener("click", collapseTaxonomy);
+elements.taxonomyThreshold.addEventListener("input", updateTaxonomyThreshold);
+elements.taxonomyOnlyLacking.addEventListener("change", renderTaxonomy);
 elements.loadMore.addEventListener("click", () => { state.shown += 12; renderGallery(); });
 elements.explorerToggle.addEventListener("click", () => setExplorerOpen(!state.explorerOpen));
 elements.dialog.querySelector(".dialog-close").addEventListener("click", () => elements.dialog.close());
