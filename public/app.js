@@ -508,11 +508,14 @@ function drawTaxonomyLabel(group, node, relativeDepth, inner, outer) {
   const midpoint = (node.x0 + node.x1) / 2;
   const degrees = midpoint * 180 / Math.PI - 90;
   const flipped = degrees > 90 && degrees < 270;
+  const [labelX, labelY] = taxonomyPolar(radius + 4, midpoint);
   const label = makeTaxonomySvgElement("text", {
     class: "taxonomy-arc-label",
     dy: ".32em",
+    x: labelX,
+    y: labelY,
     "text-anchor": flipped ? "end" : "start",
-    transform: `rotate(${degrees} 360 360) translate(${radius + 4} 360) rotate(${flipped ? 180 : 0})`
+    transform: `rotate(${degrees + (flipped ? 180 : 0)} ${labelX} ${labelY})`
   });
   const displayLabel = node.depth === 1
     ? taxonomyShortLabels[node.slug] ?? node.label
